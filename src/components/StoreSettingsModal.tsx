@@ -161,8 +161,9 @@ export const StoreSettingsModal: React.FC<StoreSettingsModalProps> = ({ isOpen, 
 
   const handleLoadCatalogNow = async () => {
     const catalog = getCatalogForRubro(formData.businessType);
+    await DataService.updateStoreInfo(formData);
     await DataService.replaceProducts(catalog);
-    setCatalogLoadedNotice(`¡Catálogo de "${formData.businessType}" cargado con éxito (${catalog.length} productos)!`);
+    setCatalogLoadedNotice(`¡Catálogo de "${formData.businessType}" reemplazado con éxito (${catalog.length} productos de ejemplo cargados)!`);
     setShouldReplaceCatalog(false);
   };
 

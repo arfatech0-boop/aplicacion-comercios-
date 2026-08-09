@@ -1,6 +1,99 @@
 import { Product, BusinessRubro } from '../types';
 
 export const RUBRO_CATALOGS: Record<string, Product[]> = {
+  'Comercio General / Multirrubro': [
+    {
+      id: 'prod-gen-1',
+      code: '779888999001',
+      name: 'Termo de Acero Inoxidable 1 Litro',
+      category: 'Bazar & Hogar',
+      supplierId: 'sup-1',
+      costPrice: 12500,
+      salePrice: 22000,
+      stock: 18,
+      minStock: 5,
+      unit: 'un',
+      brand: 'Stanley / Lumilagro',
+      description: 'Termo de doble pared con pico cebador cebado continuo 24hs frío/calor',
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'prod-gen-2',
+      code: '779888999002',
+      name: 'Auriculares Inalámbricos Bluetooth TWS',
+      category: 'Electrónica',
+      supplierId: 'sup-1',
+      costPrice: 8900,
+      salePrice: 16500,
+      stock: 25,
+      minStock: 6,
+      unit: 'un',
+      brand: 'Xiaomi / TWS',
+      description: 'Auriculares estéreo con estuche de carga USB-C',
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'prod-gen-3',
+      code: '779888999003',
+      name: 'Caja de Chocolates Surtidos 250g',
+      category: 'Regalería',
+      supplierId: 'sup-1',
+      costPrice: 4200,
+      salePrice: 7800,
+      stock: 30,
+      minStock: 10,
+      unit: 'un',
+      brand: 'Ferrero / Bon o Bon',
+      description: 'Bombones y chocolates surtidos en caja para regalo',
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'prod-gen-4',
+      code: '779888999004',
+      name: 'Pack x12 Lapiceras Tinta Gel 0.5mm',
+      category: 'Librería',
+      supplierId: 'sup-1',
+      costPrice: 2100,
+      salePrice: 4200,
+      stock: 40,
+      minStock: 10,
+      unit: 'pack',
+      brand: 'BIC / Faber-Castell',
+      description: 'Bolígrafos trazo fino colores surtidos',
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'prod-gen-5',
+      code: '779888999005',
+      name: 'Golosinas Surtidas Display Alfajores x12',
+      category: 'Kiosco',
+      supplierId: 'sup-1',
+      costPrice: 5500,
+      salePrice: 9600,
+      stock: 15,
+      minStock: 5,
+      unit: 'caja',
+      brand: 'Guaymallén / Havanna',
+      description: 'Caja display alfajores de dulce de leche con baño de chocolate',
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'prod-gen-6',
+      code: '779888999006',
+      name: 'Bebida Energizante 473ml Pack x6',
+      category: 'Bebidas',
+      supplierId: 'sup-1',
+      costPrice: 6000,
+      salePrice: 10800,
+      stock: 20,
+      minStock: 8,
+      unit: 'pack',
+      brand: 'Speed / Red Bull',
+      description: 'Latas de bebida energizante fría',
+      updatedAt: new Date().toISOString()
+    }
+  ],
+
   'Indumentaria / Calzado': [
     {
       id: 'prod-ind-1',
@@ -560,6 +653,13 @@ export const RUBRO_CATALOGS: Record<string, Product[]> = {
 };
 
 export function getCatalogForRubro(rubro: string): Product[] {
+  if (!rubro) return RUBRO_CATALOGS['Comercio General / Multirrubro'];
+
+  // Direct key lookup
+  if (RUBRO_CATALOGS[rubro]) {
+    return RUBRO_CATALOGS[rubro];
+  }
+
   // Normalize string matching
   const key = Object.keys(RUBRO_CATALOGS).find(k => 
     rubro.toLowerCase().includes(k.toLowerCase()) || k.toLowerCase().includes(rubro.toLowerCase())
@@ -567,9 +667,30 @@ export function getCatalogForRubro(rubro: string): Product[] {
   if (key && RUBRO_CATALOGS[key]) {
     return RUBRO_CATALOGS[key];
   }
-  // Default to indumentaria if clothing selected, else general
-  if (rubro.toLowerCase().includes('indumentaria') || rubro.toLowerCase().includes('ropa')) {
+
+  // Specific keyword fallbacks
+  const lower = rubro.toLowerCase();
+  if (lower.includes('indumentaria') || lower.includes('ropa') || lower.includes('calzado')) {
     return RUBRO_CATALOGS['Indumentaria / Calzado'];
   }
-  return RUBRO_CATALOGS['Ferretería / Corralón'];
+  if (lower.includes('supermercado') || lower.includes('almacen') || lower.includes('almacén')) {
+    return RUBRO_CATALOGS['Supermercado / Almacén'];
+  }
+  if (lower.includes('ferreteria') || lower.includes('ferretería') || lower.includes('corralon') || lower.includes('corralón')) {
+    return RUBRO_CATALOGS['Ferretería / Corralón'];
+  }
+  if (lower.includes('electronica') || lower.includes('electrónica') || lower.includes('computacion') || lower.includes('computación')) {
+    return RUBRO_CATALOGS['Electrónica / Computación'];
+  }
+  if (lower.includes('gastronomia') || lower.includes('gastronomía') || lower.includes('panaderia') || lower.includes('panadería')) {
+    return RUBRO_CATALOGS['Gastronomía / Panadería'];
+  }
+  if (lower.includes('autopartes') || lower.includes('repuestos') || lower.includes('taller')) {
+    return RUBRO_CATALOGS['Autopartes / Repuestos'];
+  }
+  if (lower.includes('servicios') || lower.includes('profesional')) {
+    return RUBRO_CATALOGS['Servicios / Profesional'];
+  }
+
+  return RUBRO_CATALOGS['Comercio General / Multirrubro'];
 }
