@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AppState } from './types';
+import { AppState, SystemUser } from './types';
 import { DataService } from './services/dataService';
 import { Navbar, ActiveTab } from './components/Navbar';
 import { DashboardView } from './components/DashboardView';
@@ -15,7 +15,9 @@ import { ReportsView } from './components/ReportsView';
 import { UserGuideView } from './components/UserGuideView';
 import { StoreSettingsModal } from './components/StoreSettingsModal';
 import { CardRatesModal } from './components/CardRatesModal';
-import { Search, Plus, AlertTriangle, ShieldCheck, User, Settings, Store, CreditCard, BookOpen } from 'lucide-react';
+import { LoginView } from './components/LoginView';
+import { UserManagementModal } from './components/UserManagementModal';
+import { Search, Plus, AlertTriangle, ShieldCheck, User, Settings, Store, CreditCard, BookOpen, Users, LogOut, Key } from 'lucide-react';
 
 export default function App() {
   const [appState, setAppState] = useState<AppState>(DataService.getState());
@@ -23,6 +25,17 @@ export default function App() {
   const [quickSearch, setQuickSearch] = useState('');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [cardRatesOpen, setCardRatesOpen] = useState(false);
+  const [usersModalOpen, setUsersModalOpen] = useState(false);
+
+  // Active Authenticated User Session
+  const [currentUser, setCurrentUser] = useState<SystemUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('gc_current_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  });
 
   useEffect(() => {
     // Initialize data service & real-time SSE listener
@@ -30,10 +43,32 @@ export default function App() {
 
     const unsubscribe = DataService.subscribe(newState => {
       setAppState(newState);
+      // Synchronize currentUser state if updated
+      if (currentUser) {
+        const updated = newState.users?.find(u => u.id === currentUser.id);
+        if (updated) {
+          if (!updated.active) {
+            handleLogout();
+          } else {
+            setCurrentUser(updated);
+            localStorage.setItem('gc_current_user', JSON.stringify(updated));
+          }
+        }
+      }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [currentUser]);
+
+  const handleLoginSuccess = (user: SystemUser) => {
+    setCurrentUser(user);
+    localStorage.setItem('gc_current_user', JSON.stringify(user));
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('gc_current_user');
+  };
 
   const lowStockCount = appState.products.filter(p => p.stock <= p.minStock).length;
 
@@ -44,6 +79,10 @@ export default function App() {
     }
   };
 
+  if (!currentUser) {
+    return <LoginView appState={appState} onLoginSuccess={handleLoginSuccess} />;
+  }
+
   return (
     <div className="flex flex-col lg:flex-row h-screen w-full bg-slate-100 font-sans text-slate-900 overflow-hidden">
       {/* Sidebar Navigation */}
@@ -51,8 +90,10 @@ export default function App() {
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         appState={appState} 
+        currentUser={currentUser}
         onOpenSettings={() => setSettingsOpen(true)}
         onOpenCardRates={() => setCardRatesOpen(true)}
+        onOpenUserManagement={() => setUsersModalOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -73,15 +114,29 @@ export default function App() {
           </form>
 
           <div className="flex items-center space-x-2 sm:space-x-3 ml-3">
+            {/* User Management Button (Admin only) */}
+            {currentUser.role === 'admin' && (
+              <button
+                onClick={() => setUsersModalOpen(true)}
+                className="hidden md:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors text-xs font-bold shadow-xs"
+                title="Gestión de Usuarios y Contraseñas"
+              >
+                <Users className="w-3.5 h-3.5 text-purple-600" />
+                <span>Usuarios</span>
+              </button>
+            )}
+
             {/* Rubro Badge */}
-            <button
-              onClick={() => setSettingsOpen(true)}
-              className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-all text-xs font-bold border border-slate-700 shadow-xs"
-              title="Ajustar Rubro o Tipo de Comercio"
-            >
-              <Settings className="w-3.5 h-3.5 text-indigo-400" />
-              <span>{appState.storeInfo.businessType || 'Boutique & Indumentaria'}</span>
-            </button>
+            {currentUser.role === 'admin' && (
+              <button
+                onClick={() => setSettingsOpen(true)}
+                className="hidden sm:flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 transition-all text-xs font-bold border border-slate-700 shadow-xs"
+                title="Ajustar Rubro o Tipo de Comercio"
+              >
+                <Settings className="w-3.5 h-3.5 text-indigo-400" />
+                <span>{appState.storeInfo.businessType || 'Boutique & Indumentaria'}</span>
+              </button>
+            )}
 
             {lowStockCount > 0 && (
               <button
@@ -95,7 +150,7 @@ export default function App() {
 
             <button
               onClick={() => setActiveTab('guide')}
-              className="hidden md:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors text-xs font-bold"
+              className="hidden lg:flex items-center space-x-1.5 px-2.5 py-1.5 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 transition-colors text-xs font-bold"
               title="Manual & Guía Explicativa"
             >
               <BookOpen className="w-3.5 h-3.5 text-indigo-600" />
@@ -110,14 +165,24 @@ export default function App() {
               <span>+ Nueva Venta</span>
             </button>
 
-            <div className="hidden md:flex items-center space-x-2.5 pl-3 border-l border-slate-200 text-xs">
-              <div className="w-8 h-8 rounded-full bg-slate-900 text-indigo-400 font-bold flex items-center justify-center border border-indigo-500/30 shadow-xs">
-                <User className="w-4 h-4" />
+            {/* Active User Badge & Logout */}
+            <div className="flex items-center space-x-2 pl-2 border-l border-slate-200 text-xs">
+              <div className="hidden sm:flex flex-col text-right">
+                <span className="font-black text-slate-800 block text-[11px] leading-tight truncate max-w-[120px]">
+                  {currentUser.name}
+                </span>
+                <span className="text-[10px] text-indigo-600 block font-bold capitalize">
+                  {currentUser.role === 'admin' ? 'Administrador' : 'Cajero / Vendedor'}
+                </span>
               </div>
-              <div className="text-left">
-                <span className="font-extrabold text-slate-800 block text-[11px] leading-tight">Cajero Activo</span>
-                <span className="text-[10px] text-emerald-600 block font-bold">Turno Abierto</span>
-              </div>
+              <button
+                onClick={handleLogout}
+                className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-bold text-xs flex items-center space-x-1 transition-colors"
+                title="Cerrar Sesión"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Salir</span>
+              </button>
             </div>
           </div>
         </header>
@@ -172,15 +237,15 @@ export default function App() {
         {/* Footer Status Bar */}
         <footer className="h-8 bg-slate-900 text-slate-400 px-4 sm:px-6 flex items-center justify-between text-[10px] flex-shrink-0 border-t border-slate-800 select-none">
           <div className="flex items-center space-x-4 sm:space-x-6">
-            <span className="font-mono">DB: v2.4.1 (Cloud-Sync)</span>
+            <span className="font-mono">DB: v2.4.1 (Multi-User Active)</span>
             <span className="flex items-center">
               <div className="w-2 h-2 rounded-full bg-emerald-500 mr-1.5 animate-pulse" />
-              <span className="text-slate-300 font-semibold">Sincronizado</span>
+              <span className="text-slate-300 font-semibold">Sesión: {currentUser.username} ({currentUser.role})</span>
             </span>
             <span className="hidden md:inline">Terminal ID: PX-99</span>
           </div>
           <div className="flex items-center space-x-4">
-            <span className="hidden sm:inline text-indigo-300 font-mono font-bold">DASHBOARD_LIVE_STREAM: TRUE</span>
+            <span className="hidden sm:inline text-indigo-300 font-mono font-bold">MULTI_USER_AUTH: ACTIVE</span>
             <span className="text-slate-400 uppercase font-mono">{new Date().toLocaleDateString('es-AR')}</span>
           </div>
         </footer>
@@ -198,6 +263,14 @@ export default function App() {
         isOpen={cardRatesOpen}
         onClose={() => setCardRatesOpen(false)}
         storeInfo={appState.storeInfo}
+      />
+
+      {/* User Management & Password Reset Modal */}
+      <UserManagementModal
+        isOpen={usersModalOpen}
+        onClose={() => setUsersModalOpen(false)}
+        appState={appState}
+        currentUser={currentUser}
       />
     </div>
   );

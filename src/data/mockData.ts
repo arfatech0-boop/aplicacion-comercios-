@@ -563,5 +563,16 @@ export const initialAppData: AppState = {
       date: "2026-08-03T10:15:00.000Z",
       reason: "Retiro de cliente Constructora Horizon (RET-0001-00045)"
     }
+  ],
+  users: [
+    {
+      id: "user-admin-default",
+      username: "admin",
+      password: "admin",
+      name: "Administrador Principal",
+      role: "admin",
+      active: true,
+      createdAt: "2026-08-01T00:00:00.000Z"
+    }
   ]
 };

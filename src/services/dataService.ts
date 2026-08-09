@@ -1,4 +1,4 @@
-import { AppState, Product, Supplier, Customer, Sale, CustomerWithdrawal, Cheque, CashRegister } from '../types';
+import { AppState, Product, Supplier, Customer, Sale, CustomerWithdrawal, Cheque, CashRegister, CustomerTransaction, StockMovement, GlobalPriceIncreaseLog, StoreInfo, SystemUser } from '../types';
 import { initialAppData } from '../data/mockData';
 
 export class DataService {
@@ -468,5 +468,48 @@ export class DataService {
     } catch (e) {}
     this.state = JSON.parse(JSON.stringify(initialAppData));
     this.notify();
+  }
+
+  public static async saveUser(user: SystemUser): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await fetch('/api/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(user)
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        this.state.users = json.data;
+        this.notify();
+        return { success: true };
+      }
+      return { success: false, error: json.error || 'Error al guardar el usuario' };
+    } catch (e) {
+      const index = this.state.users.findIndex(u => u.id === user.id);
+      if (index >= 0) {
+        this.state.users[index] = user;
+      } else {
+        this.state.users.unshift(user);
+      }
+      this.notify();
+      return { success: true };
+    }
+  }
+
+  public static async deleteUser(id: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        this.state.users = json.data;
+        this.notify();
+        return { success: true };
+      }
+      return { success: false, error: json.error || 'Error al eliminar el usuario' };
+    } catch (e) {
+      this.state.users = this.state.users.filter(u => u.id !== id);
+      this.notify();
+      return { success: true };
+    }
   }
 }

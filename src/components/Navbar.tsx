@@ -21,7 +21,7 @@ import {
   Building2,
   BookOpen
 } from 'lucide-react';
-import { AppState } from '../types';
+import { AppState, SystemUser } from '../types';
 import { DataService } from '../services/dataService';
 
 export type ActiveTab = 
@@ -41,8 +41,10 @@ interface NavbarProps {
   activeTab: ActiveTab;
   setActiveTab: (tab: ActiveTab) => void;
   appState: AppState;
+  currentUser?: SystemUser | null;
   onOpenSettings?: () => void;
   onOpenCardRates?: () => void;
+  onOpenUserManagement?: () => void;
   quickSearchText?: string;
   setQuickSearchText?: (text: string) => void;
 }
@@ -51,8 +53,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   activeTab, 
   setActiveTab, 
   appState,
+  currentUser,
   onOpenSettings,
-  onOpenCardRates
+  onOpenCardRates,
+  onOpenUserManagement
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const lowStockCount = appState.products.filter(p => p.stock <= p.minStock).length;
@@ -251,6 +255,19 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Bottom Sync & Settings Footer */}
         <div className="p-3 border-t border-slate-800/80 bg-slate-950/40 space-y-2">
+          {onOpenUserManagement && currentUser?.role === 'admin' && (
+            <button
+              onClick={onOpenUserManagement}
+              className="w-full flex items-center justify-between p-2 rounded-lg bg-purple-950/70 hover:bg-purple-900 border border-purple-700/60 text-purple-200 hover:text-white text-xs font-bold transition-all shadow-xs"
+            >
+              <div className="flex items-center space-x-2">
+                <Users className="w-4 h-4 text-purple-400" />
+                <span>Usuarios & Permisos</span>
+              </div>
+              <ChevronRight className="w-3.5 h-3.5 text-purple-300" />
+            </button>
+          )}
+
           {onOpenCardRates && (
             <button
               onClick={onOpenCardRates}
@@ -264,7 +281,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {onOpenSettings && (
+          {onOpenSettings && currentUser?.role === 'admin' && (
             <button
               onClick={onOpenSettings}
               className="w-full flex items-center justify-between p-2 rounded-lg bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-slate-300 hover:text-white text-xs font-bold transition-all"

@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 import { initialAppData } from './src/data/mockData';
-import { AppState, Product, Supplier, Customer, Sale, CustomerWithdrawal, Cheque, CashRegister } from './src/types';
+import { AppState, Product, Supplier, Customer, Sale, CustomerWithdrawal, Cheque, CashRegister, SystemUser } from './src/types';
 
 const app = express();
 const PORT = 3000;
@@ -60,8 +60,75 @@ app.get('/api/events', (req, res) => {
   });
 });
 
-// Ensure storeInfo defaults
+// Ensure storeInfo & users defaults
 appState.storeInfo = { ...initialAppData.storeInfo, ...appState.storeInfo };
+if (!appState.users || appState.users.length === 0) {
+  appState.users = [...initialAppData.users];
+}
+
+// POST Login Endpoint
+app.post('/api/login', (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ success: false, error: 'Ingrese usuario y contraseña' });
+  }
+
+  const user = appState.users.find(u => u.username.toLowerCase() === username.trim().toLowerCase());
+  if (!user) {
+    return res.status(401).json({ success: false, error: 'Usuario no encontrado' });
+  }
+
+  if (user.password !== password) {
+    return res.status(401).json({ success: false, error: 'Contraseña incorrecta' });
+  }
+
+  if (!user.active) {
+    return res.status(403).json({ success: false, error: 'Usuario inactivo. Contacte al administrador' });
+  }
+
+  user.lastLogin = new Date().toISOString();
+  saveState();
+  broadcastUpdate('USERS_UPDATED', appState.users);
+
+  return res.json({ success: true, user });
+});
+
+// POST Save / Update User
+app.post('/api/users', (req, res) => {
+  const user: SystemUser = req.body;
+  if (!user || !user.username || !user.password || !user.name) {
+    return res.status(400).json({ success: false, error: 'Datos de usuario incompletos' });
+  }
+
+  const existingIndex = appState.users.findIndex(u => u.id === user.id);
+  const usernameDuplicate = appState.users.find(u => u.username.toLowerCase() === user.username.toLowerCase() && u.id !== user.id);
+  
+  if (usernameDuplicate) {
+    return res.status(400).json({ success: false, error: 'El nombre de usuario ya existe en el sistema' });
+  }
+
+  if (existingIndex >= 0) {
+    appState.users[existingIndex] = user;
+  } else {
+    appState.users.unshift(user);
+  }
+
+  saveState();
+  broadcastUpdate('USERS_UPDATED', appState.users);
+  return res.json({ success: true, data: appState.users });
+});
+
+// DELETE User
+app.delete('/api/users/:id', (req, res) => {
+  const { id } = req.params;
+  if (appState.users.length <= 1) {
+    return res.status(400).json({ success: false, error: 'No se puede eliminar el único usuario del sistema' });
+  }
+  appState.users = appState.users.filter(u => u.id !== id);
+  saveState();
+  broadcastUpdate('USERS_UPDATED', appState.users);
+  return res.json({ success: true, data: appState.users });
+});
 
 // GET full state
 app.get('/api/data', (req, res) => {

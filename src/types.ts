@@ -226,6 +226,19 @@ export interface StoreInfo {
   cardInterestPlans?: CardInterestPlan[];
 }
 
+export type UserRole = 'admin' | 'cashier' | 'manager';
+
+export interface SystemUser {
+  id: string;
+  username: string;
+  password: string;
+  name: string;
+  role: UserRole;
+  active: boolean;
+  createdAt: string;
+  lastLogin?: string;
+}
+
 export interface AppState {
   storeInfo: StoreInfo;
   products: Product[];
@@ -238,4 +251,5 @@ export interface AppState {
   cheques: Cheque[];
   cashRegisters: CashRegister[];
   stockMovements: StockMovement[];
+  users: SystemUser[];
 }
