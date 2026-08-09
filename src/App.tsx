@@ -141,7 +141,7 @@ export default function App() {
           )}
 
           {activeTab === 'customers' && (
-            <CurrentAccountsView appState={appState} />
+            <CurrentAccountsView appState={appState} setActiveTab={setActiveTab} />
           )}
 
           {activeTab === 'withdrawals' && (

@@ -17,18 +17,22 @@ import {
   Pencil,
   Trash2,
   MapPin,
-  MessageSquare
+  MessageSquare,
+  Receipt,
+  FileCheck,
+  Printer
 } from 'lucide-react';
-import { AppState, Customer, CustomerTransaction } from '../types';
+import { AppState, Customer, CustomerTransaction, Sale, InvoiceType, PaymentMethod, TaxCondition } from '../types';
 import { DataService } from '../services/dataService';
 import { exportCustomersExcel } from '../utils/excelExporter';
-import { generateCustomerAccountStatementPDF } from '../utils/pdfGenerator';
+import { generateCustomerAccountStatementPDF, generateSaleInvoicePDF } from '../utils/pdfGenerator';
 
 interface CurrentAccountsViewProps {
   appState: AppState;
+  setActiveTab?: (tab: any) => void;
 }
 
-export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appState }) => {
+export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appState, setActiveTab }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
@@ -41,6 +45,75 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
   const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'cheque'>('cash');
   const [paymentNotes, setPaymentNotes] = useState('');
+
+  // Billing Modal State (Facturar directamente desde Cuentas Corrientes)
+  const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
+  const [billingCustomer, setBillingCustomer] = useState<Customer | null>(null);
+  const [billingInvoiceType, setBillingInvoiceType] = useState<InvoiceType>('FACTURA_B');
+  const [billingAmount, setBillingAmount] = useState<number | ''>('');
+  const [billingConcept, setBillingConcept] = useState('Facturación de saldo en cuenta corriente');
+  const [billingPaymentMethod, setBillingPaymentMethod] = useState<PaymentMethod>('current_account');
+
+  const handleEmitInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!billingCustomer || !billingAmount || Number(billingAmount) <= 0) return;
+
+    if (billingInvoiceType === 'FACTURA_A') {
+      if (!billingCustomer.dniCuit || billingCustomer.dniCuit.trim().length < 8) {
+        alert('Para emitir Factura A se requiere registrar el CUIT del cliente. Por favor edite los datos del cliente primero.');
+        return;
+      }
+    }
+
+    const amt = Number(billingAmount);
+    const nextInvoiceNum = `FC-${appState.storeInfo.invoicePrefix}-${(appState.sales.length + 1052).toString().padStart(8, '0')}`;
+    const generatedCae = `743${Math.floor(10000000000 + Math.random() * 90000000000)}`;
+    const caeDueDate = new Date(Date.now() + 10 * 86400000).toLocaleDateString('es-AR');
+
+    const taxCond: TaxCondition = billingInvoiceType === 'FACTURA_A' ? 'Responsable Inscripto' : 'Consumidor Final / General';
+
+    const newSale: Sale = {
+      id: `sale-${Date.now()}`,
+      invoiceNumber: nextInvoiceNum,
+      invoiceType: billingInvoiceType,
+      cae: generatedCae,
+      caeDueDate,
+      customerCuitDni: billingCustomer.dniCuit || '20-00000000-0',
+      customerTaxCondition: taxCond,
+      date: new Date().toISOString(),
+      customerId: billingCustomer.id,
+      customerName: billingCustomer.name,
+      items: [
+        {
+          productId: `billing-${Date.now()}`,
+          code: 'SERV-01',
+          productName: billingConcept || 'Servicio de Facturación Cta Cte',
+          quantity: 1,
+          unitPrice: amt,
+          costPrice: 0,
+          subtotal: amt
+        }
+      ],
+      subtotal: amt,
+      discount: 0,
+      surcharge: 0,
+      totalAmount: amt,
+      paymentMethod: billingPaymentMethod,
+      notes: `Facturado desde Cuentas Corrientes (${billingConcept})`,
+      status: 'completed'
+    };
+
+    await DataService.processSale(newSale);
+
+    // Emit and download official PDF
+    generateSaleInvoicePDF(newSale, appState.storeInfo);
+
+    setIsBillingModalOpen(false);
+    setBillingCustomer(null);
+    setBillingAmount('');
+
+    alert(`¡Factura ${newSale.invoiceNumber} emitida e impresa con éxito!`);
+  };
 
   const filteredCustomers = appState.customers.filter(c => {
     const q = searchQuery.toLowerCase();
@@ -273,17 +346,30 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
                 </div>
 
                 {/* Actions */}
-                <div className="pt-2 flex items-center space-x-2 border-t border-slate-100">
+                <div className="pt-2 flex items-center space-x-1.5 border-t border-slate-100 flex-wrap gap-y-1.5">
                   <button
                     onClick={() => {
                       setPayingCustomer(customer);
                       setPaymentAmount(customer.currentBalance > 0 ? customer.currentBalance : '');
                       setIsPaymentModalOpen(true);
                     }}
-                    className="flex-1 py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center space-x-1 transition-colors"
+                    className="flex-1 min-w-[120px] py-2 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center space-x-1 transition-colors shadow-xs"
                   >
                     <DollarSign className="w-4 h-4" />
                     <span>Cobrar Entrega</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setBillingCustomer(customer);
+                      setBillingAmount(customer.currentBalance > 0 ? customer.currentBalance : '');
+                      setBillingConcept(`Facturación de saldo en Cta. Cte. (${customer.name})`);
+                      setIsBillingModalOpen(true);
+                    }}
+                    className="py-2 px-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center space-x-1 transition-colors shadow-xs"
+                    title="Emitir e imprimir Factura A/B/C para este cliente"
+                  >
+                    <Receipt className="w-4 h-4" />
+                    <span>Facturar</span>
                   </button>
                   <button
                     onClick={() => {
@@ -309,7 +395,7 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
                       generateCustomerAccountStatementPDF(customer, transactions, appState.storeInfo);
                     }}
                     className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
-                    title="Imprimir PDF"
+                    title="Imprimir Resumen PDF"
                   >
                     <FileText className="w-4 h-4 text-indigo-600" />
                   </button>
@@ -612,6 +698,121 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
                     {editingCustomer.id ? 'Guardar Cambios' : 'Crear Cliente'}
                   </button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Direct Billing Modal (Emitir e Imprimir Factura A/B/C) */}
+      {isBillingModalOpen && billingCustomer && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-xs">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Emitir e Imprimir Factura</h3>
+                <p className="text-xs text-slate-500 font-semibold">{billingCustomer.name} (CUIT/DNI: {billingCustomer.dniCuit || 'Sin registrar'})</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsBillingModalOpen(false);
+                  setBillingCustomer(null);
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEmitInvoice} className="space-y-3">
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Tipo de Comprobante AFIP *</label>
+                <div className="grid grid-cols-4 gap-1.5 text-center text-xs">
+                  {[
+                    { id: 'FACTURA_B', label: 'Factura B' },
+                    { id: 'FACTURA_A', label: 'Factura A' },
+                    { id: 'FACTURA_C', label: 'Factura C' },
+                    { id: 'TICKET_X', label: 'Ticket X' }
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setBillingInvoiceType(t.id as InvoiceType)}
+                      className={`py-2 px-1 rounded-lg border font-bold text-[11px] transition-all ${
+                        billingInvoiceType === t.id
+                          ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Monto a Facturar ($) *</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="any"
+                  required
+                  value={billingAmount}
+                  onChange={e => setBillingAmount(e.target.value ? Number(e.target.value) : '')}
+                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 font-extrabold text-slate-900 text-base focus:ring-2 focus:ring-indigo-500"
+                />
+                <span className="text-[10px] text-slate-500 italic block mt-0.5">
+                  Saldo de deuda actual del cliente: ${billingCustomer.currentBalance.toLocaleString('es-AR')}
+                </span>
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Concepto / Detalle de la Factura *</label>
+                <input
+                  type="text"
+                  required
+                  value={billingConcept}
+                  onChange={e => setBillingConcept(e.target.value)}
+                  className="w-full px-3 py-1.5 border rounded-lg bg-slate-50 text-xs font-medium"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Condición de Pago / Medio</label>
+                <select
+                  value={billingPaymentMethod}
+                  onChange={e => setBillingPaymentMethod(e.target.value as PaymentMethod)}
+                  className="w-full px-3 py-1.5 border rounded-lg bg-slate-50 font-semibold"
+                >
+                  <option value="current_account">Cuenta Corriente (A Crédito)</option>
+                  <option value="cash">Efectivo (Contado)</option>
+                  <option value="transfer">Transferencia Bancaria</option>
+                  <option value="card">Tarjeta de Débito / Crédito</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col space-y-2 pt-3 border-t border-slate-100">
+                <button
+                  type="submit"
+                  className="w-full py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold shadow-md flex items-center justify-center space-x-1.5 transition-colors"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Emitir e Imprimir Factura PDF</span>
+                </button>
+
+                {setActiveTab && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsBillingModalOpen(false);
+                      setActiveTab('pos');
+                    }}
+                    className="w-full py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center justify-center space-x-1"
+                  >
+                    <span>Ir a Punto de Venta (POS) para Venta Detallada por Artículo</span>
+                  </button>
+                )}
               </div>
             </form>
           </div>
