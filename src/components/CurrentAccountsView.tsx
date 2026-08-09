@@ -16,7 +16,8 @@ import {
   Edit,
   Pencil,
   Trash2,
-  MapPin
+  MapPin,
+  MessageSquare
 } from 'lucide-react';
 import { AppState, Customer, CustomerTransaction } from '../types';
 import { DataService } from '../services/dataService';
@@ -56,6 +57,12 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
     e.preventDefault();
     if (!editingCustomer?.name) return;
 
+    const existingCustomer = editingCustomer.id
+      ? appState.customers.find(c => c.id === editingCustomer.id)
+      : null;
+
+    const newBalance = Number(editingCustomer.currentBalance) || 0;
+
     const custToSave: Customer = {
       id: editingCustomer.id || `cust-${Date.now()}`,
       name: editingCustomer.name,
@@ -64,14 +71,44 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
       email: editingCustomer.email || '',
       address: editingCustomer.address || '',
       creditLimit: Number(editingCustomer.creditLimit) || 100000,
-      currentBalance: editingCustomer.currentBalance || 0,
+      currentBalance: newBalance,
       notes: editingCustomer.notes || '',
       updatedAt: new Date().toISOString()
     };
 
+    // If balance was modified manually on an existing customer, log an audit transaction
+    if (existingCustomer && existingCustomer.currentBalance !== newBalance) {
+      const diff = newBalance - existingCustomer.currentBalance;
+      const auditTx: CustomerTransaction = {
+        id: `tx-adj-${Date.now()}`,
+        customerId: custToSave.id,
+        type: 'adjustment',
+        amount: Math.abs(diff),
+        balanceAfter: newBalance,
+        date: new Date().toISOString(),
+        description: `Ajuste Manual de Saldo (${diff > 0 ? 'Aumento Deuda +' : 'Reducción Deuda -'}$${Math.abs(diff).toLocaleString('es-AR')})${custToSave.notes ? ' - ' + custToSave.notes : ''}`
+      };
+      appState.customerTransactions.unshift(auditTx);
+    }
+
     await DataService.saveCustomer(custToSave);
     setIsCustomerModalOpen(false);
     setEditingCustomer(null);
+  };
+
+  const handleSendWhatsApp = (customer: Customer) => {
+    if (!customer.phone) {
+      alert('El cliente no posee un número de teléfono registrado.');
+      return;
+    }
+    const cleanPhone = customer.phone.replace(/[^0-9]/g, '');
+    const storeName = appState.storeInfo.name;
+    const debtStr = customer.currentBalance.toLocaleString('es-AR');
+    const availableCredit = Math.max(0, customer.creditLimit - customer.currentBalance).toLocaleString('es-AR');
+    const message = encodeURIComponent(
+      `Hola *${customer.name}*, le saludamos de *${storeName}*.\n\nLe recordamos que posee un saldo pendiente en cuenta corriente de *$${debtStr}*.\nLímite de crédito disponible: *$${availableCredit}*.\n\nCualquier duda o consulta estamos a su disposición. ¡Muchas gracias!`
+    );
+    window.open(`https://wa.me/${cleanPhone}?text=${message}`, '_blank');
   };
 
   const handleDeleteCustomer = async (customerId: string, customerName: string) => {
@@ -199,7 +236,23 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
                   </div>
 
                   <div className="mt-3 space-y-1 text-xs text-slate-600">
-                    {customer.phone && <p className="flex items-center space-x-1.5"><Phone className="w-3.5 h-3.5 text-slate-400" /><span>{customer.phone}</span></p>}
+                    {customer.phone && (
+                      <p className="flex items-center justify-between">
+                        <span className="flex items-center space-x-1.5">
+                          <Phone className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{customer.phone}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSendWhatsApp(customer)}
+                          className="px-2 py-0.5 rounded bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[10px] flex items-center space-x-1 border border-emerald-200 transition-colors"
+                          title="Enviar recordatorio de deuda por WhatsApp"
+                        >
+                          <MessageSquare className="w-3 h-3 text-emerald-600" />
+                          <span>WhatsApp</span>
+                        </button>
+                      </p>
+                    )}
                     {customer.email && <p className="flex items-center space-x-1.5"><Mail className="w-3.5 h-3.5 text-slate-400" /><span>{customer.email}</span></p>}
                     {customer.address && <p className="flex items-center space-x-1.5"><MapPin className="w-3.5 h-3.5 text-slate-400" /><span>{customer.address}</span></p>}
                   </div>
@@ -327,13 +380,18 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
                         <td className="p-2.5 font-medium text-slate-800">{tx.description}</td>
                         <td className="p-2.5">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            tx.type === 'sale' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                            tx.type === 'sale' ? 'bg-amber-100 text-amber-800' :
+                            tx.type === 'payment' ? 'bg-emerald-100 text-emerald-800' :
+                            'bg-purple-100 text-purple-800 border border-purple-200'
                           }`}>
-                            {tx.type === 'sale' ? 'Venta Cta Cte' : 'Pago / Entrega'}
+                            {tx.type === 'sale' ? 'Venta Cta Cte' : tx.type === 'payment' ? 'Pago / Entrega' : 'Ajuste Manual'}
                           </span>
                         </td>
-                        <td className={`p-2.5 text-right font-bold ${tx.type === 'payment' ? 'text-emerald-600' : 'text-slate-900'}`}>
-                          {tx.type === 'payment' ? `-$${tx.amount.toLocaleString('es-AR')}` : `+$${tx.amount.toLocaleString('es-AR')}`}
+                        <td className={`p-2.5 text-right font-bold ${
+                          tx.type === 'payment' ? 'text-emerald-600' :
+                          tx.type === 'adjustment' ? 'text-purple-700' : 'text-slate-900'
+                        }`}>
+                          {tx.type === 'payment' ? `-$${tx.amount.toLocaleString('es-AR')}` : `${tx.type === 'adjustment' ? '⚙️ ' : '+'}$${tx.amount.toLocaleString('es-AR')}`}
                         </td>
                         <td className="p-2.5 text-right font-bold text-slate-900">${tx.balanceAfter.toLocaleString('es-AR')}</td>
                       </tr>

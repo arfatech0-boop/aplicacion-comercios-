@@ -220,41 +220,82 @@ app.post('/api/sales', (req, res) => {
   // 2. Add Sale record
   appState.sales.unshift(sale);
 
-  // 3. Handle Current Account if paymentMethod === 'current_account'
-  if (sale.paymentMethod === 'current_account' && sale.customerId) {
-    const customer = appState.customers.find(c => c.id === sale.customerId);
-    if (customer) {
-      customer.currentBalance += sale.totalAmount;
-      customer.updatedAt = new Date().toISOString();
+  // 3. Process payment methods (Single or Mixed / Payments Breakdown)
+  if (sale.paymentsBreakdown && sale.paymentsBreakdown.length > 0) {
+    const cashEntry = sale.paymentsBreakdown.find(p => p.method === 'cash');
+    const ccEntry = sale.paymentsBreakdown.find(p => p.method === 'current_account');
 
-      appState.customerTransactions.unshift({
-        id: `tx-${Date.now()}`,
-        customerId: customer.id,
-        type: 'sale',
-        amount: sale.totalAmount,
-        balanceAfter: customer.currentBalance,
-        date: sale.date,
-        description: `Venta ${sale.invoiceNumber} a Cuenta Corriente`,
-        saleId: sale.id
-      });
+    if (ccEntry && ccEntry.amount > 0 && sale.customerId) {
+      const customer = appState.customers.find(c => c.id === sale.customerId);
+      if (customer) {
+        customer.currentBalance += ccEntry.amount;
+        customer.updatedAt = new Date().toISOString();
+
+        appState.customerTransactions.unshift({
+          id: `tx-${Date.now()}`,
+          customerId: customer.id,
+          type: 'sale',
+          amount: ccEntry.amount,
+          balanceAfter: customer.currentBalance,
+          date: sale.date,
+          description: `Venta ${sale.invoiceNumber} a Cuenta Corriente (Pago Combinado)`,
+          saleId: sale.id
+        });
+      }
     }
-  }
 
-  // 4. Handle Cash Register movement if cash
-  if (sale.paymentMethod === 'cash') {
-    const openCash = appState.cashRegisters.find(c => c.status === 'open');
-    if (openCash) {
-      openCash.cashSales += sale.totalAmount;
-      openCash.expectedTotal += sale.totalAmount;
-      openCash.movements.unshift({
-        id: `mov-${Date.now()}`,
-        type: 'in',
-        amount: sale.totalAmount,
-        description: `Venta ${sale.invoiceNumber} (Efectivo)`,
-        category: 'sale',
-        date: sale.date,
-        paymentMethod: 'cash'
-      });
+    if (cashEntry && cashEntry.amount > 0) {
+      const openCash = appState.cashRegisters.find(c => c.status === 'open');
+      if (openCash) {
+        openCash.cashSales += cashEntry.amount;
+        openCash.expectedTotal += cashEntry.amount;
+        openCash.movements.unshift({
+          id: `mov-${Date.now()}`,
+          type: 'in',
+          amount: cashEntry.amount,
+          description: `Venta ${sale.invoiceNumber} (Efectivo - Pago Combinado)`,
+          category: 'sale',
+          date: sale.date,
+          paymentMethod: 'cash'
+        });
+      }
+    }
+  } else {
+    // Single Payment Method handling
+    if (sale.paymentMethod === 'current_account' && sale.customerId) {
+      const customer = appState.customers.find(c => c.id === sale.customerId);
+      if (customer) {
+        customer.currentBalance += sale.totalAmount;
+        customer.updatedAt = new Date().toISOString();
+
+        appState.customerTransactions.unshift({
+          id: `tx-${Date.now()}`,
+          customerId: customer.id,
+          type: 'sale',
+          amount: sale.totalAmount,
+          balanceAfter: customer.currentBalance,
+          date: sale.date,
+          description: `Venta ${sale.invoiceNumber} a Cuenta Corriente`,
+          saleId: sale.id
+        });
+      }
+    }
+
+    if (sale.paymentMethod === 'cash') {
+      const openCash = appState.cashRegisters.find(c => c.status === 'open');
+      if (openCash) {
+        openCash.cashSales += sale.totalAmount;
+        openCash.expectedTotal += sale.totalAmount;
+        openCash.movements.unshift({
+          id: `mov-${Date.now()}`,
+          type: 'in',
+          amount: sale.totalAmount,
+          description: `Venta ${sale.invoiceNumber} (Efectivo)`,
+          category: 'sale',
+          date: sale.date,
+          paymentMethod: 'cash'
+        });
+      }
     }
   }
 

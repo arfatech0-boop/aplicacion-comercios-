@@ -105,7 +105,7 @@ export interface CustomerWithdrawal {
   authorizedBy?: string;
 }
 
-export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'cheque' | 'current_account';
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'cheque' | 'current_account' | 'mixed';
 
 export type InvoiceType = 'FACTURA_A' | 'FACTURA_B' | 'FACTURA_C' | 'TICKET_X' | 'REMITO';
 
@@ -137,6 +137,7 @@ export interface Sale {
   cardBankName?: string;
   totalAmount: number;
   paymentMethod: PaymentMethod;
+  paymentsBreakdown?: { method: PaymentMethod; amount: number }[];
   notes?: string;
   status: 'completed' | 'cancelled';
 }

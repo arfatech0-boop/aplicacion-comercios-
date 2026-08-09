@@ -25,6 +25,9 @@ export const WithdrawalsView: React.FC<WithdrawalsViewProps> = ({ appState }) =>
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'pending' | 'billed' | 'returned'>('ALL');
 
+  // Bulk Billing Selection State
+  const [selectedWithdrawalIds, setSelectedWithdrawalIds] = useState<string[]>([]);
+
   // Modal to add new withdrawal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -43,6 +46,42 @@ export const WithdrawalsView: React.FC<WithdrawalsViewProps> = ({ appState }) =>
       w.items.some(i => i.productName.toLowerCase().includes(q));
     return matchesStatus && matchesSearch;
   });
+
+  const pendingFilteredWithdrawals = filteredWithdrawals.filter(w => w.status === 'pending');
+
+  const toggleSelectWithdrawal = (id: string) => {
+    setSelectedWithdrawalIds(prev =>
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllPending = () => {
+    const pendingIds = pendingFilteredWithdrawals.map(w => w.id);
+    const allSelected = pendingIds.every(id => selectedWithdrawalIds.includes(id));
+    if (allSelected) {
+      setSelectedWithdrawalIds(prev => prev.filter(id => !pendingIds.includes(id)));
+    } else {
+      setSelectedWithdrawalIds(prev => Array.from(new Set([...prev, ...pendingIds])));
+    }
+  };
+
+  const handleBillSelectedWithdrawals = async () => {
+    if (selectedWithdrawalIds.length === 0) return;
+
+    const selectedWithdrawals = appState.withdrawals.filter(w => selectedWithdrawalIds.includes(w.id));
+    const totalSelectedAmount = selectedWithdrawals.reduce((sum, w) => sum + w.totalAmount, 0);
+
+    if (!window.confirm(`¿Confirmar facturación unificada de ${selectedWithdrawalIds.length} remito(s) seleccionado(s) por un total de $${totalSelectedAmount.toLocaleString('es-AR')}?`)) {
+      return;
+    }
+
+    for (const w of selectedWithdrawals) {
+      await DataService.updateWithdrawalStatus(w.id, 'billed');
+    }
+
+    setSelectedWithdrawalIds([]);
+    alert(`¡Se facturaron exitosamente ${selectedWithdrawals.length} remitos por un valor total de $${totalSelectedAmount.toLocaleString('es-AR')}!`);
+  };
 
   const handleAddItemToWithdrawal = () => {
     if (!selectedProductId) return;
@@ -187,35 +226,99 @@ export const WithdrawalsView: React.FC<WithdrawalsViewProps> = ({ appState }) =>
         </div>
       </div>
 
+      {/* Bulk Billing Action Bar */}
+      {pendingFilteredWithdrawals.length > 0 && (
+        <div className="bg-indigo-900 text-white p-3.5 rounded-xl shadow-md flex items-center justify-between gap-3 text-xs">
+          <div className="flex items-center space-x-3">
+            <input
+              type="checkbox"
+              checked={
+                pendingFilteredWithdrawals.length > 0 &&
+                pendingFilteredWithdrawals.every(w => selectedWithdrawalIds.includes(w.id))
+              }
+              onChange={toggleSelectAllPending}
+              className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+            />
+            <span className="font-semibold">
+              {selectedWithdrawalIds.length > 0
+                ? `${selectedWithdrawalIds.length} remito(s) seleccionado(s) para facturar (Total: $${appState.withdrawals.filter(w => selectedWithdrawalIds.includes(w.id)).reduce((sum, w) => sum + w.totalAmount, 0).toLocaleString('es-AR')})`
+                : 'Seleccionar todos los remitos pendientes'}
+            </span>
+          </div>
+
+          {selectedWithdrawalIds.length > 0 && (
+            <button
+              onClick={handleBillSelectedWithdrawals}
+              className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-white font-extrabold shadow flex items-center space-x-1.5 transition-colors"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              <span>🧾 Facturar Remitos Seleccionados ({selectedWithdrawalIds.length})</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Withdrawals List */}
       <div className="space-y-4">
-        {filteredWithdrawals.map(withdrawal => (
-          <div key={withdrawal.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-3 gap-2">
-              <div>
-                <div className="flex items-center space-x-2">
-                  <span className="font-extrabold text-slate-900 text-base">{withdrawal.withdrawalNumber}</span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
-                    withdrawal.status === 'pending' ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800'
-                  }`}>
-                    {withdrawal.status === 'pending' ? 'Pendiente Facturar' : 'Facturado'}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  Fecha: <span className="font-medium text-slate-800">{new Date(withdrawal.date).toLocaleString('es-AR')}</span> | Cliente: <span className="font-bold text-slate-900">{withdrawal.customerName}</span>
-                </p>
-              </div>
+        {filteredWithdrawals.map(withdrawal => {
+          const isSelected = selectedWithdrawalIds.includes(withdrawal.id);
+          const isPending = withdrawal.status === 'pending';
 
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => generateWithdrawalReceiptPDF(withdrawal, appState.storeInfo)}
-                  className="px-3 py-1.5 rounded bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 font-bold text-xs flex items-center space-x-1 transition-colors"
-                >
-                  <FileText className="w-4 h-4" />
-                  <span>Imprimir Remito PDF</span>
-                </button>
+          return (
+            <div
+              key={withdrawal.id}
+              className={`bg-white rounded-xl shadow-sm border transition-all p-5 space-y-3 ${
+                isSelected ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/10' : 'border-slate-200'
+              }`}
+            >
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b pb-3 gap-2">
+                <div className="flex items-center space-x-3">
+                  {isPending && (
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelectWithdrawal(withdrawal.id)}
+                      className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                    />
+                  )}
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="font-extrabold text-slate-900 text-base">{withdrawal.withdrawalNumber}</span>
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                        isPending ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        {isPending ? 'Pendiente Facturar' : 'Facturado'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Fecha: <span className="font-medium text-slate-800">{new Date(withdrawal.date).toLocaleString('es-AR')}</span> | Cliente: <span className="font-bold text-slate-900">{withdrawal.customerName}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  {isPending && (
+                    <button
+                      onClick={async () => {
+                        if (window.confirm(`¿Marcar remito ${withdrawal.withdrawalNumber} como facturado?`)) {
+                          await DataService.updateWithdrawalStatus(withdrawal.id, 'billed');
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-700 font-bold text-xs flex items-center space-x-1 border border-emerald-200 transition-colors"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Facturar Remito</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => generateWithdrawalReceiptPDF(withdrawal, appState.storeInfo)}
+                    className="px-3 py-1.5 rounded bg-indigo-50 hover:bg-indigo-600 hover:text-white text-indigo-600 font-bold text-xs flex items-center space-x-1 transition-colors"
+                  >
+                    <FileText className="w-4 h-4" />
+                    <span>Imprimir Remito PDF</span>
+                  </button>
+                </div>
               </div>
-            </div>
 
             {/* Items Table */}
             <div className="overflow-x-auto">
@@ -250,7 +353,8 @@ export const WithdrawalsView: React.FC<WithdrawalsViewProps> = ({ appState }) =>
               </span>
             </div>
           </div>
-        ))}
+        );
+      })}
       </div>
 
       {/* New Withdrawal Modal */}

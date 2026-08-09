@@ -329,6 +329,29 @@ export class DataService {
     this.notify();
   }
 
+  public static async updateWithdrawalStatus(id: string, status: 'pending' | 'billed' | 'returned'): Promise<void> {
+    try {
+      const res = await fetch(`/api/withdrawals/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status })
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          await this.fetchLatest();
+          return;
+        }
+      }
+    } catch (e) {}
+
+    const item = this.state.withdrawals.find(w => w.id === id);
+    if (item) {
+      item.status = status;
+      this.notify();
+    }
+  }
+
   public static async saveCheque(cheque: Cheque): Promise<void> {
     try {
       const res = await fetch('/api/cheques', {

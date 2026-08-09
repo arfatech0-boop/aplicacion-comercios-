@@ -35,6 +35,12 @@ export const POSView: React.FC<POSViewProps> = ({ appState, onOpenCardRates }) =
   const [saleNotes, setSaleNotes] = useState('');
   const [lastCompletedSale, setLastCompletedSale] = useState<Sale | null>(null);
 
+  // Mixed Payment Breakdown State
+  const [mixedCash, setMixedCash] = useState<number | ''>('');
+  const [mixedCard, setMixedCard] = useState<number | ''>('');
+  const [mixedTransfer, setMixedTransfer] = useState<number | ''>('');
+  const [mixedCurrentAccount, setMixedCurrentAccount] = useState<number | ''>('');
+
   // Card & Bank Surcharge State
   const [cardSurchargePercent, setCardSurchargePercent] = useState<number>(
     appState.storeInfo.cardSurchargePercent || 10
@@ -222,6 +228,33 @@ export const POSView: React.FC<POSViewProps> = ({ appState, onOpenCardRates }) =
   const handleCompleteSale = async () => {
     if (cart.length === 0) return;
 
+    let paymentsBreakdown: { method: PaymentMethod; amount: number }[] | undefined = undefined;
+
+    if (paymentMethod === 'mixed') {
+      const cashAmt = Number(mixedCash) || 0;
+      const cardAmt = Number(mixedCard) || 0;
+      const transferAmt = Number(mixedTransfer) || 0;
+      const ccAmt = Number(mixedCurrentAccount) || 0;
+      const totalParts = cashAmt + cardAmt + transferAmt + ccAmt;
+
+      if (Math.abs(totalParts - totalAmount) > 0.01) {
+        alert(`¡Atención! La suma de las partes ($${totalParts.toLocaleString('es-AR')}) no coincide con el total a cobrar ($${totalAmount.toLocaleString('es-AR')}). Revisa los montos asignados.`);
+        return;
+      }
+
+      if (ccAmt > 0 && !selectedCustomer) {
+        alert('Para incluir una porción a Cuenta Corriente debe seleccionar un cliente registrado.');
+        return;
+      }
+
+      paymentsBreakdown = [
+        { method: 'cash' as PaymentMethod, amount: cashAmt },
+        { method: 'card' as PaymentMethod, amount: cardAmt },
+        { method: 'transfer' as PaymentMethod, amount: transferAmt },
+        { method: 'current_account' as PaymentMethod, amount: ccAmt }
+      ].filter(p => p.amount > 0);
+    }
+
     if (paymentMethod === 'current_account' && !selectedCustomer) {
       alert('Para vender a Cuenta Corriente debe seleccionar un cliente registrado.');
       return;
@@ -235,8 +268,11 @@ export const POSView: React.FC<POSViewProps> = ({ appState, onOpenCardRates }) =
       }
     }
 
-    if (paymentMethod === 'current_account' && selectedCustomer) {
-      const prospectiveBalance = selectedCustomer.currentBalance + totalAmount;
+    if ((paymentMethod === 'current_account' || (paymentsBreakdown && paymentsBreakdown.some(p => p.method === 'current_account'))) && selectedCustomer) {
+      const ccPortion = paymentsBreakdown
+        ? (paymentsBreakdown.find(p => p.method === 'current_account')?.amount || 0)
+        : totalAmount;
+      const prospectiveBalance = selectedCustomer.currentBalance + ccPortion;
       if (prospectiveBalance > selectedCustomer.creditLimit) {
         const confirmExceed = window.confirm(
           `¡Atención! La compra supera el límite de crédito del cliente ($${selectedCustomer.creditLimit.toLocaleString('es-AR')}). Saldo resultante: $${prospectiveBalance.toLocaleString('es-AR')}. ¿Desea autorizar la venta de todas formas?`
@@ -252,7 +288,7 @@ export const POSView: React.FC<POSViewProps> = ({ appState, onOpenCardRates }) =
     const cuitOrDni = selectedCustomer?.dniCuit || customCuitDni || '20-00000000-0';
     const taxCond: TaxCondition = selectedInvoiceType === 'FACTURA_A' ? 'Responsable Inscripto' : 'Consumidor Final / General';
 
-    const cardSurchargeVal = paymentMethod === 'card' ? cardSurchargeAmount : 0;
+    const cardSurchargeVal = (paymentMethod === 'card' || (paymentsBreakdown && paymentsBreakdown.some(p => p.method === 'card'))) ? cardSurchargeAmount : 0;
 
     const newSale: Sale = {
       id: `sale-${Date.now()}`,
@@ -272,6 +308,7 @@ export const POSView: React.FC<POSViewProps> = ({ appState, onOpenCardRates }) =
       cardBankName: paymentMethod === 'card' ? selectedBankName : undefined,
       totalAmount,
       paymentMethod,
+      paymentsBreakdown,
       notes: saleNotes,
       status: 'completed'
     };
@@ -283,6 +320,10 @@ export const POSView: React.FC<POSViewProps> = ({ appState, onOpenCardRates }) =
     setCart([]);
     setDiscountAmount(0);
     setAmountPaidCash('');
+    setMixedCash('');
+    setMixedCard('');
+    setMixedTransfer('');
+    setMixedCurrentAccount('');
     setSaleNotes('');
     setCustomCuitDni('');
     setIsManualInvoiceType(false);
@@ -622,7 +663,8 @@ export const POSView: React.FC<POSViewProps> = ({ appState, onOpenCardRates }) =
                   { id: 'card', label: 'Tarjeta' },
                   { id: 'transfer', label: 'Transferencia' },
                   { id: 'cheque', label: 'Cheque' },
-                  { id: 'current_account', label: 'Cuenta Cte.' }
+                  { id: 'current_account', label: 'Cuenta Cte.' },
+                  { id: 'mixed', label: '🔀 Cobro Mixto' }
                 ].map(m => (
                   <button
                     key={m.id}
@@ -638,6 +680,92 @@ export const POSView: React.FC<POSViewProps> = ({ appState, onOpenCardRates }) =
                 ))}
               </div>
             </div>
+
+            {/* Mixed Payment Breakdown Panel */}
+            {paymentMethod === 'mixed' && (
+              <div className="bg-amber-50/80 border border-amber-200 rounded-xl p-3 space-y-2.5 text-xs">
+                <div className="flex items-center justify-between font-bold text-amber-950">
+                  <span>Desglose de Cobro Combinado / Mixto</span>
+                  <span className="text-[10px] text-amber-800 font-mono">Total a cubrir: ${totalAmount.toLocaleString('es-AR')}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-700 block">Efectivo ($)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="0"
+                      value={mixedCash}
+                      onChange={e => setMixedCash(e.target.value ? Number(e.target.value) : '')}
+                      className="w-full px-2 py-1 border rounded bg-white font-semibold text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-700 block">Tarjeta / Mercado Pago ($)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="0"
+                      value={mixedCard}
+                      onChange={e => setMixedCard(e.target.value ? Number(e.target.value) : '')}
+                      className="w-full px-2 py-1 border rounded bg-white font-semibold text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-700 block">Transferencia ($)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="0"
+                      value={mixedTransfer}
+                      onChange={e => setMixedTransfer(e.target.value ? Number(e.target.value) : '')}
+                      className="w-full px-2 py-1 border rounded bg-white font-semibold text-slate-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-700 block">A Cuenta Corriente ($)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      placeholder="0"
+                      value={mixedCurrentAccount}
+                      onChange={e => setMixedCurrentAccount(e.target.value ? Number(e.target.value) : '')}
+                      className="w-full px-2 py-1 border rounded bg-white font-bold text-red-600"
+                    />
+                  </div>
+                </div>
+
+                {(() => {
+                  const currentSum = (Number(mixedCash) || 0) + (Number(mixedCard) || 0) + (Number(mixedTransfer) || 0) + (Number(mixedCurrentAccount) || 0);
+                  const diff = totalAmount - currentSum;
+                  return (
+                    <div className="flex justify-between items-center pt-2 border-t border-amber-200 text-[11px]">
+                      <span className="font-bold text-slate-800">
+                        Suma ingresada: <strong className="text-amber-900">${currentSum.toLocaleString('es-AR')}</strong>
+                      </span>
+                      {Math.abs(diff) < 0.01 ? (
+                        <span className="text-emerald-700 font-extrabold bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                          ✓ Monto Cubierto Totalmente
+                        </span>
+                      ) : diff > 0 ? (
+                        <span className="text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded">
+                          Falta asignar: ${diff.toLocaleString('es-AR')}
+                        </span>
+                      ) : (
+                        <span className="text-red-700 font-bold bg-red-100 px-2 py-0.5 rounded">
+                          Exceso de asignación: ${Math.abs(diff).toLocaleString('es-AR')}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             {/* Configuración de Recargo por Tarjeta y Banco */}
             {paymentMethod === 'card' && (
