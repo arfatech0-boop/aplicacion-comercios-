@@ -46,16 +46,16 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({ appState, setActiv
       color: 'from-indigo-600 to-indigo-800',
       description: 'Sistema ultrarrápido de caja registrado para cobrar con lector de código de barras, teclado o pantalla táctil.',
       features: [
-        'Búsqueda por código de barras, nombre, categoría, talle o color.',
-        'Soporte instantáneo para Factura A, Factura B, Factura C, Ticket X y Remito.',
-        'Cálculo automático de descuento por efectivo o recargo por cuotas en tarjeta.',
-        'Atajos de teclado (F2 para cobrar en efectivo, F4 para tarjeta, F8 para cuenta corriente).'
+        'Búsqueda por código de barras, SKU, nombre, categoría, talle o color con navegación por flechas de teclado.',
+        'Soporte para Cobro Mixto / Combinado: divida una venta entre Efectivo, Tarjeta, Transferencia y Cuenta Corriente con validación en vivo.',
+        'Emisión instantánea de Factura A, Factura B, Factura C, Ticket X y Remito de entrega.',
+        'Cálculo automático de descuento por efectivo o recargo dinámico por cuotas/banco en tarjeta.'
       ],
       steps: [
-        'Seleccione o busque el producto utilizando el buscador superior o haciendo clic en el catálogo visual.',
-        'Ajuste la cantidad, aplique un descuento o seleccione el cliente asignado si corresponde.',
-        'Haga clic en "+ Cobrar Venta" o presione F2/F4 según el medio de pago.',
-        'El sistema actualizará el stock inmediatamente y emitirá el comprobante correspondiente.'
+        'Seleccione o escanee el producto utilizando el lector de barras o el buscador superior.',
+        'Ajuste las cantidades en el carrito o asigne un cliente de la lista.',
+        'Para ventas divididas, elija "🔀 Cobro Mixto" e ingrese los montos parciales para cada medio de pago hasta cubrir el total.',
+        'Haga clic en "+ Confirmar Venta" para que el sistema descuente stock y emita el comprobante.'
       ]
     },
     {
@@ -70,38 +70,58 @@ export const UserGuideView: React.FC<UserGuideViewProps> = ({ appState, setActiv
         'Alertas automáticas de bajo stock en la barra superior.',
         'Aumento masivo de precios por proveedor o por categoría específica.',
         'Ajustes manuales de inventario (Entradas por compra, Salidas por rotura/pérdida).',
-        'Impresión de etiquetas con código de barras en un solo clic.'
+        'Impresión de etiquetas de góndola con código de barras en un solo clic.'
       ],
       steps: [
         'Acceda a la pestaña "Stock & Inventario" desde el menú lateral.',
         'Para agregar un artículo nuevo, haga clic en el botón "+ Nuevo Producto".',
         'Especifique precios de costo, margen de ganancia, precio de venta, talle y proveedor.',
-        'Utilice el filtro por categoría o la pestaña "Proveedores & Aumento" para actualizar precios en masa.'
+        'Utilice la pestaña "Proveedores & Aumento" para actualizar precios en masa aplicables al costo o la venta.'
       ]
     },
     {
       id: 'customers',
-      title: '3. Cuentas Corrientes & Clientes',
+      title: '3. Cuentas Corrientes, Clientes & WhatsApp',
       badge: 'Crédito y Cobranzas',
       image: customerGuideImg,
       icon: Users,
       color: 'from-blue-600 to-indigo-800',
-      description: 'Administración de deudas de clientes, entregas a cuenta, estados de cuenta e historial de compras.',
+      description: 'Administración completa de clientes, límites de crédito, recordatorios directos por WhatsApp y auditoría de saldo.',
       features: [
-        'Registro de clientes con CUIT / DNI, condición fiscal y límite de crédito.',
-        'Imputación de ventas directo a Cuenta Corriente desde la pantalla de cobro POS.',
-        'Cobro de entregas/pagos parciales con emisión de Recibo X de Cobranza.',
-        'Resumen de saldo deudor actualizado en tiempo real y exportable a PDF.'
+        'Edición y eliminación completa de datos de clientes (Teléfono, CUIT, Email, Domicilio, Límite de Crédito y Saldo).',
+        'Envío instantáneo de Recordatorios de Deuda por WhatsApp con plantilla de mensaje y saldo actualizado.',
+        'Auditoría e historial automático de Ajustes Manuales de Saldo registrados con fecha y hora.',
+        'Cobro de entregas/pagos a cuenta con emisión de Recibo X de Cobranza.'
       ],
       steps: [
-        'En la pestaña "Cuentas Corrientes", seleccione el cliente para ver su saldo pendiente.',
-        'Para registrar un cobro o entrega a cuenta, presione el botón "Registrar Entrega / Pago".',
-        'Para realizar una venta a crédito, en la caja POS elija el cliente y seleccione el medio "A Cuenta Corriente".'
+        'En la pestaña "Cuentas Corrientes", utilice el icono de lápiz ✏️ en la tarjeta del cliente para editar sus datos o ajustar su deuda.',
+        'Para enviar un aviso de cobranza, presione el botón "WhatsApp" en la tarjeta del cliente.',
+        'Para registrar un pago a cuenta, haga clic en "Cobrar Entrega" e ingrese el monto recibido.',
+        'Consulte el botón "Historial" para ver todas las ventas a crédito, entregas y ajustes con auditoría.'
+      ]
+    },
+    {
+      id: 'withdrawals',
+      title: '4. Remitos & Facturación Masiva de Retiros',
+      badge: 'Entregas & Valos',
+      image: posGuideImg,
+      icon: FileText,
+      color: 'from-amber-600 to-orange-800',
+      description: 'Gestión de vales de mercadería retirada sin cobrar y facturación unificada por cliente.',
+      features: [
+        'Emisión de comprobantes de Remito PDF con descuento de inventario inmediato.',
+        'Selección múltiple con casillas (checkboxes) para marcar varios retiros pendientes.',
+        'Facturación masiva en un solo clic: convierte múltiples vales seleccionados en entregas facturadas.'
+      ],
+      steps: [
+        'Haga clic en "+ Registrar Nuevo Retiro" para emitir un remito y entregar productos a un cliente.',
+        'Marque las casillas de los remitos pendientes que desee liquidar.',
+        'Presione el botón "🧾 Facturar Remitos Seleccionados" para procesar su cobranza unificada.'
       ]
     },
     {
       id: 'cash_reports',
-      title: '4. Control de Caja & Reportes Financieros',
+      title: '5. Control de Caja & Reportes Financieros',
       badge: 'Finanzas & Arqueo',
       image: reportsGuideImg,
       icon: Wallet,
