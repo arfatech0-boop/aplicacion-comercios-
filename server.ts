@@ -313,6 +313,32 @@ app.post('/api/customers/payment', (req, res) => {
   res.json({ success: true, customer, transaction, data: appState });
 });
 
+// POST Add or update Customer
+app.post('/api/customers', (req, res) => {
+  const customer: Customer = req.body;
+  if (!customer || !customer.name) {
+    return res.status(400).json({ success: false, error: 'Customer name is required' });
+  }
+  const index = appState.customers.findIndex(c => c.id === customer.id);
+  if (index >= 0) {
+    appState.customers[index] = customer;
+  } else {
+    appState.customers.unshift(customer);
+  }
+  saveState();
+  broadcastUpdate('CUSTOMERS_UPDATED', appState.customers);
+  res.json({ success: true, data: appState.customers });
+});
+
+// DELETE Customer
+app.delete('/api/customers/:id', (req, res) => {
+  const { id } = req.params;
+  appState.customers = appState.customers.filter(c => c.id !== id);
+  saveState();
+  broadcastUpdate('CUSTOMERS_UPDATED', appState.customers);
+  res.json({ success: true, data: appState.customers });
+});
+
 // POST Customer Withdrawal (Mercadería retirada)
 app.post('/api/withdrawals', (req, res) => {
   const withdrawal: CustomerWithdrawal = req.body;

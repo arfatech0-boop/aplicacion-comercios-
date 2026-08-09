@@ -68,6 +68,8 @@ export class DataService {
             this.state = { ...this.state, storeInfo: payload.payload };
           } else if (payload.type === 'PRODUCTS_UPDATED' && payload.payload) {
             this.state = { ...this.state, products: payload.payload };
+          } else if (payload.type === 'CUSTOMERS_UPDATED' && payload.payload) {
+            this.state = { ...this.state, customers: payload.payload };
           } else if (payload.payload && payload.payload.state) {
             this.state = payload.payload.state;
           } else if (payload.payload && payload.payload.data) {
@@ -354,12 +356,40 @@ export class DataService {
   }
 
   public static async saveCustomer(customer: Customer): Promise<void> {
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(customer)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          await this.fetchLatest();
+          return;
+        }
+      }
+    } catch (e) {}
+
     const index = this.state.customers.findIndex(c => c.id === customer.id);
     if (index >= 0) {
       this.state.customers[index] = customer;
     } else {
       this.state.customers.unshift(customer);
     }
+    this.notify();
+  }
+
+  public static async deleteCustomer(id: string): Promise<void> {
+    try {
+      const res = await fetch(`/api/customers/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await this.fetchLatest();
+        return;
+      }
+    } catch (e) {}
+
+    this.state.customers = this.state.customers.filter(c => c.id !== id);
     this.notify();
   }
 
