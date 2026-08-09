@@ -20,7 +20,8 @@ import {
   MessageSquare,
   Receipt,
   FileCheck,
-  Printer
+  Printer,
+  Package
 } from 'lucide-react';
 import { AppState, Customer, CustomerTransaction, Sale, InvoiceType, PaymentMethod, TaxCondition, Cheque } from '../types';
 import { DataService } from '../services/dataService';
@@ -502,11 +503,11 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
       {/* Account Statement History Modal */}
       {selectedCustomer && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4">
+          <div className="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
-                <h3 className="font-bold text-slate-900 text-base">Estado de Cuenta Corriente</h3>
-                <span className="text-xs text-slate-500 font-semibold">{selectedCustomer.name} (DNI/CUIT: {selectedCustomer.dniCuit})</span>
+                <h3 className="font-bold text-slate-900 text-base">Estado de Cuenta Corriente e Historial Detallado</h3>
+                <span className="text-xs text-slate-500 font-semibold">{selectedCustomer.name} (DNI/CUIT: {selectedCustomer.dniCuit || 'Sin registrar'})</span>
               </div>
               <button onClick={() => setSelectedCustomer(null)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -518,56 +519,85 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
                 <span className="text-slate-500">Límite Crédito:</span> <span className="font-bold">${selectedCustomer.creditLimit.toLocaleString('es-AR')}</span>
               </div>
               <div>
-                <span className="text-slate-500">Saldo Actual:</span> <span className="font-extrabold text-red-600 text-sm">${selectedCustomer.currentBalance.toLocaleString('es-AR')}</span>
+                <span className="text-slate-500">Saldo Deuda Actual:</span> <span className="font-extrabold text-red-600 text-sm">${selectedCustomer.currentBalance.toLocaleString('es-AR')}</span>
               </div>
               <button
                 onClick={() => {
                   const txs = appState.customerTransactions.filter(t => t.customerId === selectedCustomer.id);
                   generateCustomerAccountStatementPDF(selectedCustomer, txs, appState.storeInfo);
                 }}
-                className="px-3 py-1 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-500 flex items-center space-x-1"
+                className="px-3.5 py-1.5 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-500 flex items-center space-x-1 shadow-xs"
               >
                 <FileText className="w-3.5 h-3.5" />
-                <span>Exportar PDF</span>
+                <span>Exportar Resumen PDF</span>
               </button>
             </div>
 
-            <div className="max-h-72 overflow-y-auto border rounded-lg">
+            <div className="max-h-80 overflow-y-auto border rounded-xl shadow-xs">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-100 text-slate-600 uppercase font-semibold text-[10px]">
+                <thead className="bg-slate-100 text-slate-600 uppercase font-semibold text-[10px] sticky top-0 z-10">
                   <tr>
-                    <th className="p-2.5">Fecha</th>
-                    <th className="p-2.5">Concepto</th>
-                    <th className="p-2.5">Tipo</th>
-                    <th className="p-2.5 text-right">Monto</th>
-                    <th className="p-2.5 text-right">Saldo Restante</th>
+                    <th className="p-2.5">Fecha y Hora</th>
+                    <th className="p-2.5">Concepto & Productos Retirados</th>
+                    <th className="p-2.5">Tipo Movimiento</th>
+                    <th className="p-2.5 text-right">Monto ($)</th>
+                    <th className="p-2.5 text-right">Saldo Deudor</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {appState.customerTransactions
                     .filter(t => t.customerId === selectedCustomer.id)
-                    .map(tx => (
-                      <tr key={tx.id} className="hover:bg-slate-50">
-                        <td className="p-2.5 text-slate-500">{new Date(tx.date).toLocaleDateString('es-AR')}</td>
-                        <td className="p-2.5 font-medium text-slate-800">{tx.description}</td>
-                        <td className="p-2.5">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            tx.type === 'sale' ? 'bg-amber-100 text-amber-800' :
-                            tx.type === 'payment' ? 'bg-emerald-100 text-emerald-800' :
-                            'bg-purple-100 text-purple-800 border border-purple-200'
+                    .map(tx => {
+                      // Lookup related items if sale or withdrawal
+                      const relatedSale = tx.saleId ? appState.sales.find(s => s.id === tx.saleId) : null;
+                      const relatedWithdrawal = tx.withdrawalId ? appState.withdrawals.find(w => w.id === tx.withdrawalId) : null;
+
+                      const itemsList = relatedSale
+                        ? relatedSale.items.map(i => `${i.quantity}x ${i.productName} ($${i.unitPrice.toLocaleString('es-AR')})`).join(' • ')
+                        : (relatedWithdrawal
+                          ? relatedWithdrawal.items.map(i => `${i.quantity}x ${i.productName}`).join(' • ')
+                          : null);
+
+                      const formattedDate = new Date(tx.date).toLocaleString('es-AR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      });
+
+                      return (
+                        <tr key={tx.id} className="hover:bg-slate-50/80 transition-colors">
+                          <td className="p-2.5 text-slate-500 font-mono text-[11px] whitespace-nowrap">{formattedDate}</td>
+                          <td className="p-2.5 font-medium text-slate-800 space-y-1">
+                            <div>{tx.description}</div>
+                            {itemsList && (
+                              <div className="text-[10px] text-slate-600 bg-slate-100/90 px-2 py-1 rounded border border-slate-200/80 flex items-center space-x-1 mt-0.5">
+                                <Package className="w-3 h-3 text-indigo-600 shrink-0" />
+                                <span className="font-semibold text-slate-700">Artículos:</span>
+                                <span className="text-slate-600">{itemsList}</span>
+                              </div>
+                            )}
+                          </td>
+                          <td className="p-2.5 whitespace-nowrap">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase ${
+                              tx.type === 'sale' ? 'bg-amber-100 text-amber-800 border border-amber-300' :
+                              tx.type === 'payment' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                              'bg-purple-100 text-purple-800 border border-purple-200'
+                            }`}>
+                              {tx.type === 'sale' ? 'Venta Cta Cte' : tx.type === 'payment' ? 'Pago / Entrega' : 'Ajuste Manual'}
+                            </span>
+                          </td>
+                          <td className={`p-2.5 text-right font-extrabold whitespace-nowrap ${
+                            tx.type === 'payment' ? 'text-emerald-600' :
+                            tx.type === 'adjustment' ? 'text-purple-700' : 'text-slate-900'
                           }`}>
-                            {tx.type === 'sale' ? 'Venta Cta Cte' : tx.type === 'payment' ? 'Pago / Entrega' : 'Ajuste Manual'}
-                          </span>
-                        </td>
-                        <td className={`p-2.5 text-right font-bold ${
-                          tx.type === 'payment' ? 'text-emerald-600' :
-                          tx.type === 'adjustment' ? 'text-purple-700' : 'text-slate-900'
-                        }`}>
-                          {tx.type === 'payment' ? `-$${tx.amount.toLocaleString('es-AR')}` : `${tx.type === 'adjustment' ? '⚙️ ' : '+'}$${tx.amount.toLocaleString('es-AR')}`}
-                        </td>
-                        <td className="p-2.5 text-right font-bold text-slate-900">${tx.balanceAfter.toLocaleString('es-AR')}</td>
-                      </tr>
-                    ))}
+                            {tx.type === 'payment' ? `-$${tx.amount.toLocaleString('es-AR')}` : `${tx.type === 'adjustment' ? '⚙️ ' : '+'}$${tx.amount.toLocaleString('es-AR')}`}
+                          </td>
+                          <td className="p-2.5 text-right font-extrabold text-slate-900 whitespace-nowrap">${tx.balanceAfter.toLocaleString('es-AR')}</td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>
