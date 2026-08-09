@@ -1,0 +1,419 @@
+import { AppState, Product, Supplier, Customer, Sale, CustomerWithdrawal, Cheque, CashRegister } from '../types';
+import { initialAppData } from '../data/mockData';
+
+export class DataService {
+  private static state: AppState = { ...initialAppData };
+  private static listeners: Array<(state: AppState) => void> = [];
+  private static isConnected: boolean = false;
+  private static eventSource: EventSource | null = null;
+
+  public static getState(): AppState {
+    return this.state;
+  }
+
+  public static subscribe(listener: (state: AppState) => void): () => void {
+    this.listeners.push(listener);
+    // Initial call
+    listener(this.state);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
+  }
+
+  private static notify() {
+    this.listeners.forEach(l => l(this.state));
+  }
+
+  public static isRealtimeConnected(): boolean {
+    return this.isConnected;
+  }
+
+  public static async init() {
+    // 1. Fetch initial state from server
+    try {
+      const res = await fetch('/api/data');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          this.state = json.data;
+          this.notify();
+        }
+      }
+    } catch (err) {
+      console.warn('[DataService] Server API unavailable, using local fallback state.', err);
+    }
+
+    // 2. Connect to SSE for real-time multi-device sync
+    this.connectSSE();
+  }
+
+  private static connectSSE() {
+    if (typeof EventSource === 'undefined') return;
+
+    try {
+      this.eventSource = new EventSource('/api/events');
+
+      this.eventSource.onopen = () => {
+        this.isConnected = true;
+        console.log('[Realtime] Connected to SSE server.');
+        this.notify();
+      };
+
+      this.eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === 'FULL_SYNC' && payload.payload) {
+            this.state = payload.payload;
+          } else if (payload.type === 'STORE_INFO_UPDATED' && payload.payload) {
+            this.state = { ...this.state, storeInfo: payload.payload };
+          } else if (payload.type === 'PRODUCTS_UPDATED' && payload.payload) {
+            this.state = { ...this.state, products: payload.payload };
+          } else if (payload.payload && payload.payload.state) {
+            this.state = payload.payload.state;
+          } else if (payload.payload && payload.payload.data) {
+            this.state = payload.payload.data;
+          } else {
+            // Re-fetch state
+            this.fetchLatest();
+          }
+          this.notify();
+        } catch (e) {
+          console.error('[Realtime] Parse error:', e);
+        }
+      };
+
+      this.eventSource.onerror = () => {
+        this.isConnected = false;
+        this.notify();
+        // EventSource handles automatic reconnection
+      };
+    } catch (e) {
+      console.warn('[Realtime] Failed to initialize SSE stream:', e);
+    }
+  }
+
+  public static async fetchLatest() {
+    try {
+      const res = await fetch('/api/data');
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          this.state = json.data;
+          this.notify();
+        }
+      }
+    } catch (err) {
+      console.error('[DataService] Fetch latest error:', err);
+    }
+  }
+
+  // --- ACTIONS ---
+
+  public static async saveProduct(product: Product): Promise<void> {
+    try {
+      const res = await fetch('/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(product)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          await this.fetchLatest();
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('[DataService] Fallback to client state edit');
+    }
+
+    const index = this.state.products.findIndex(p => p.id === product.id);
+    if (index >= 0) {
+      this.state.products[index] = product;
+    } else {
+      this.state.products.unshift(product);
+    }
+    this.notify();
+  }
+
+  public static async deleteProduct(id: string): Promise<void> {
+    try {
+      const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        await this.fetchLatest();
+        return;
+      }
+    } catch (e) {}
+
+    this.state.products = this.state.products.filter(p => p.id !== id);
+    this.notify();
+  }
+
+  public static async applyGlobalPriceIncrease(params: {
+    supplierId: string;
+    categoryFilter?: string;
+    percentage: number;
+    applyToCost: boolean;
+    applyToSale: boolean;
+    recalculateMargin: boolean;
+  }): Promise<{ affectedCount: number }> {
+    try {
+      const res = await fetch('/api/suppliers/increase-prices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          this.state = json.data;
+          this.notify();
+          return { affectedCount: json.affectedCount };
+        }
+      }
+    } catch (e) {}
+
+    // Fallback client side implementation
+    const factor = 1 + params.percentage / 100;
+    let count = 0;
+    this.state.products = this.state.products.map(p => {
+      let match = true;
+      if (params.supplierId && params.supplierId !== 'ALL' && p.supplierId !== params.supplierId) match = false;
+      if (params.categoryFilter && params.categoryFilter !== 'ALL' && p.category !== params.categoryFilter) match = false;
+
+      if (match) {
+        count++;
+        let newCost = p.costPrice;
+        let newSale = p.salePrice;
+        if (params.applyToCost) newCost = Math.round(p.costPrice * factor);
+        if (params.applyToSale) {
+          if (params.recalculateMargin && params.applyToCost) {
+            const marginRatio = p.salePrice / (p.costPrice || 1);
+            newSale = Math.round(newCost * marginRatio);
+          } else {
+            newSale = Math.round(p.salePrice * factor);
+          }
+        }
+        return { ...p, costPrice: newCost, salePrice: newSale, updatedAt: new Date().toISOString() };
+      }
+      return p;
+    });
+
+    const supplierObj = this.state.suppliers.find(s => s.id === params.supplierId);
+    this.state.priceIncreaseLogs.unshift({
+      id: `inc-${Date.now()}`,
+      supplierId: params.supplierId,
+      supplierName: params.supplierId === 'ALL' ? 'Todos los Proveedores' : (supplierObj?.name || 'Proveedor'),
+      categoryFilter: params.categoryFilter,
+      percentage: params.percentage,
+      applyToCost: params.applyToCost,
+      applyToSale: params.applyToSale,
+      recalculateMargin: params.recalculateMargin,
+      affectedProductsCount: count,
+      date: new Date().toISOString()
+    });
+
+    this.notify();
+    return { affectedCount: count };
+  }
+
+  public static async processSale(sale: Sale): Promise<void> {
+    try {
+      const res = await fetch('/api/sales', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sale)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          this.state = json.data;
+          this.notify();
+          return;
+        }
+      }
+    } catch (e) {}
+
+    // Client fallback
+    sale.items.forEach(item => {
+      const prod = this.state.products.find(p => p.id === item.productId);
+      if (prod) {
+        prod.stock = Math.max(0, prod.stock - item.quantity);
+      }
+    });
+    this.state.sales.unshift(sale);
+
+    if (sale.paymentMethod === 'current_account' && sale.customerId) {
+      const customer = this.state.customers.find(c => c.id === sale.customerId);
+      if (customer) {
+        customer.currentBalance += sale.totalAmount;
+        this.state.customerTransactions.unshift({
+          id: `tx-${Date.now()}`,
+          customerId: customer.id,
+          type: 'sale',
+          amount: sale.totalAmount,
+          balanceAfter: customer.currentBalance,
+          date: sale.date,
+          description: `Venta ${sale.invoiceNumber} a Cta Cte`
+        });
+      }
+    }
+
+    this.notify();
+  }
+
+  public static async registerCustomerPayment(params: {
+    customerId: string;
+    amount: number;
+    paymentMethod: string;
+    notes?: string;
+  }): Promise<void> {
+    try {
+      const res = await fetch('/api/customers/payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(params)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          this.state = json.data;
+          this.notify();
+          return;
+        }
+      }
+    } catch (e) {}
+
+    const customer = this.state.customers.find(c => c.id === params.customerId);
+    if (customer) {
+      customer.currentBalance = Math.max(0, customer.currentBalance - params.amount);
+      this.state.customerTransactions.unshift({
+        id: `tx-${Date.now()}`,
+        customerId: customer.id,
+        type: 'payment',
+        amount: params.amount,
+        balanceAfter: customer.currentBalance,
+        date: new Date().toISOString(),
+        description: `Pago a Cta Cte (${params.paymentMethod}) ${params.notes || ''}`
+      });
+      this.notify();
+    }
+  }
+
+  public static async registerWithdrawal(withdrawal: CustomerWithdrawal): Promise<void> {
+    try {
+      const res = await fetch('/api/withdrawals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(withdrawal)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          this.state = json.data;
+          this.notify();
+          return;
+        }
+      }
+    } catch (e) {}
+
+    withdrawal.items.forEach(item => {
+      const prod = this.state.products.find(p => p.id === item.productId);
+      if (prod) {
+        prod.stock = Math.max(0, prod.stock - item.quantity);
+      }
+    });
+    this.state.withdrawals.unshift(withdrawal);
+    this.notify();
+  }
+
+  public static async saveCheque(cheque: Cheque): Promise<void> {
+    try {
+      const res = await fetch('/api/cheques', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cheque)
+      });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          this.state = json.data;
+          this.notify();
+          return;
+        }
+      }
+    } catch (e) {}
+
+    const index = this.state.cheques.findIndex(c => c.id === cheque.id);
+    if (index >= 0) {
+      this.state.cheques[index] = cheque;
+    } else {
+      this.state.cheques.unshift(cheque);
+    }
+    this.notify();
+  }
+
+  public static async saveCustomer(customer: Customer): Promise<void> {
+    const index = this.state.customers.findIndex(c => c.id === customer.id);
+    if (index >= 0) {
+      this.state.customers[index] = customer;
+    } else {
+      this.state.customers.unshift(customer);
+    }
+    this.notify();
+  }
+
+  public static async saveSupplier(supplier: Supplier): Promise<void> {
+    const index = this.state.suppliers.findIndex(s => s.id === supplier.id);
+    if (index >= 0) {
+      this.state.suppliers[index] = supplier;
+    } else {
+      this.state.suppliers.unshift(supplier);
+    }
+    this.notify();
+  }
+
+  public static async updateStoreInfo(info: Partial<AppState['storeInfo']>): Promise<void> {
+    this.state.storeInfo = { ...this.state.storeInfo, ...info };
+    this.notify();
+    try {
+      await fetch('/api/store-info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(info)
+      });
+    } catch (e) {
+      console.warn('Failed to persist store info on server, updated locally.', e);
+    }
+  }
+
+  public static async replaceProducts(products: Product[]): Promise<void> {
+    this.state.products = products;
+    this.notify();
+    try {
+      await fetch('/api/products/replace', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ products })
+      });
+    } catch (e) {
+      console.warn('Failed to persist replaced products on server, updated locally.', e);
+    }
+  }
+
+  public static async resetDemo(): Promise<void> {
+    try {
+      const res = await fetch('/api/reset-demo', { method: 'POST' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success) {
+          this.state = json.data;
+          this.notify();
+          return;
+        }
+      }
+    } catch (e) {}
+    this.state = JSON.parse(JSON.stringify(initialAppData));
+    this.notify();
+  }
+}

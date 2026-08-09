@@ -1,0 +1,449 @@
+import React, { useState } from 'react';
+import { 
+  Users, 
+  Plus, 
+  Search, 
+  DollarSign, 
+  FileSpreadsheet, 
+  FileText, 
+  CreditCard, 
+  History, 
+  AlertTriangle,
+  X,
+  CheckCircle,
+  Phone,
+  Mail,
+  Edit
+} from 'lucide-react';
+import { AppState, Customer, CustomerTransaction } from '../types';
+import { DataService } from '../services/dataService';
+import { exportCustomersExcel } from '../utils/excelExporter';
+import { generateCustomerAccountStatementPDF } from '../utils/pdfGenerator';
+
+interface CurrentAccountsViewProps {
+  appState: AppState;
+}
+
+export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appState }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+
+  // Modals
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Partial<Customer> | null>(null);
+
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [payingCustomer, setPayingCustomer] = useState<Customer | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'cheque'>('cash');
+  const [paymentNotes, setPaymentNotes] = useState('');
+
+  const filteredCustomers = appState.customers.filter(c => {
+    const q = searchQuery.toLowerCase();
+    return (
+      c.name.toLowerCase().includes(q) ||
+      c.dniCuit.toLowerCase().includes(q) ||
+      c.phone.toLowerCase().includes(q)
+    );
+  });
+
+  const totalDebt = appState.customers.reduce((acc, c) => acc + c.currentBalance, 0);
+
+  const handleSaveCustomer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCustomer?.name) return;
+
+    const custToSave: Customer = {
+      id: editingCustomer.id || `cust-${Date.now()}`,
+      name: editingCustomer.name,
+      dniCuit: editingCustomer.dniCuit || '',
+      phone: editingCustomer.phone || '',
+      email: editingCustomer.email || '',
+      address: editingCustomer.address || '',
+      creditLimit: Number(editingCustomer.creditLimit) || 100000,
+      currentBalance: editingCustomer.currentBalance || 0,
+      notes: editingCustomer.notes || '',
+      updatedAt: new Date().toISOString()
+    };
+
+    await DataService.saveCustomer(custToSave);
+    setIsCustomerModalOpen(false);
+    setEditingCustomer(null);
+  };
+
+  const handleRegisterPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payingCustomer || !paymentAmount || Number(paymentAmount) <= 0) return;
+
+    await DataService.registerCustomerPayment({
+      customerId: payingCustomer.id,
+      amount: Number(paymentAmount),
+      paymentMethod,
+      notes: paymentNotes
+    });
+
+    setIsPaymentModalOpen(false);
+    setPayingCustomer(null);
+    setPaymentAmount('');
+    setPaymentNotes('');
+
+    alert('¡Entrega de dinero / cobro registrado con éxito!');
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Gestión de Cuentas Corrientes y Deudores</h1>
+          <p className="text-xs text-slate-500">Administre saldos a crédito, entregas de dinero y estados de cuenta.</p>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => exportCustomersExcel(appState.customers)}
+            className="flex items-center space-x-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow transition-colors"
+          >
+            <FileSpreadsheet className="w-4 h-4" />
+            <span>Exportar Excel</span>
+          </button>
+          <button
+            onClick={() => {
+              setEditingCustomer({ name: '', dniCuit: '', creditLimit: 150000, currentBalance: 0 });
+              setIsCustomerModalOpen(true);
+            }}
+            className="flex items-center space-x-1.5 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Nuevo Cliente</span>
+          </button>
+        </div>
+      </div>
+
+      {/* KPI Total Debt Summary */}
+      <div className="bg-gradient-to-r from-blue-900 to-slate-900 text-white rounded-xl p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <span className="text-xs uppercase font-semibold text-blue-300 tracking-wider">Total Deuda Acumulada Cuentas Corrientes</span>
+          <div className="text-3xl font-extrabold text-white mt-1">
+            ${totalDebt.toLocaleString('es-AR')}
+          </div>
+        </div>
+        <div className="text-xs text-blue-200">
+          <span className="font-bold text-white">{appState.customers.filter(c => c.currentBalance > 0).length} clientes</span> con saldo pendiente
+        </div>
+      </div>
+
+      {/* Search & Customer Grid */}
+      <div className="space-y-4">
+        <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+          <div className="relative w-full max-w-md">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre de cliente, CUIT/DNI o teléfono..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+
+        {/* Customer Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredCustomers.map(customer => {
+            const isOverLimit = customer.currentBalance > customer.creditLimit;
+            const hasDebt = customer.currentBalance > 0;
+
+            const transactions = appState.customerTransactions.filter(t => t.customerId === customer.id);
+
+            return (
+              <div key={customer.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-5 flex flex-col justify-between space-y-4">
+                <div>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-bold text-slate-900 text-base">{customer.name}</h3>
+                      <span className="text-xs text-slate-500 font-mono">DNI/CUIT: {customer.dniCuit || '-'}</span>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                      isOverLimit ? 'bg-red-100 text-red-700 border border-red-300' :
+                      hasDebt ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800'
+                    }`}>
+                      {isOverLimit ? 'Límite Excedido' : hasDebt ? 'Con Deuda' : 'Al Día'}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 space-y-1 text-xs text-slate-600">
+                    {customer.phone && <p className="flex items-center space-x-1.5"><Phone className="w-3.5 h-3.5 text-slate-400" /><span>{customer.phone}</span></p>}
+                    {customer.email && <p className="flex items-center space-x-1.5"><Mail className="w-3.5 h-3.5 text-slate-400" /><span>{customer.email}</span></p>}
+                  </div>
+
+                  {/* Financial Metrics */}
+                  <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-1 text-xs">
+                    <div className="flex justify-between text-slate-600">
+                      <span>Límite de Crédito:</span>
+                      <span className="font-semibold">${customer.creditLimit.toLocaleString('es-AR')}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-900 font-bold pt-1 border-t border-slate-200">
+                      <span>Saldo Deuda Actual:</span>
+                      <span className={hasDebt ? 'text-red-600 font-extrabold text-sm' : 'text-emerald-600 font-extrabold text-sm'}>
+                        ${customer.currentBalance.toLocaleString('es-AR')}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="pt-2 flex items-center space-x-2 border-t border-slate-100">
+                  <button
+                    onClick={() => {
+                      setPayingCustomer(customer);
+                      setPaymentAmount(customer.currentBalance > 0 ? customer.currentBalance : '');
+                      setIsPaymentModalOpen(true);
+                    }}
+                    className="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center space-x-1 transition-colors"
+                  >
+                    <DollarSign className="w-4 h-4" />
+                    <span>Cobrar Entrega</span>
+                  </button>
+                  <button
+                    onClick={() => setSelectedCustomer(customer)}
+                    className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs flex items-center space-x-1 transition-colors"
+                    title="Ver Estado de Cuenta"
+                  >
+                    <History className="w-4 h-4" />
+                    <span className="hidden sm:inline">Historial</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      generateCustomerAccountStatementPDF(customer, transactions, appState.storeInfo);
+                    }}
+                    className="p-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                    title="Imprimir PDF"
+                  >
+                    <FileText className="w-4 h-4 text-indigo-600" />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Account Statement History Modal */}
+      {selectedCustomer && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Estado de Cuenta Corriente</h3>
+                <span className="text-xs text-slate-500 font-semibold">{selectedCustomer.name} (DNI/CUIT: {selectedCustomer.dniCuit})</span>
+              </div>
+              <button onClick={() => setSelectedCustomer(null)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex items-center justify-between bg-slate-50 p-3 rounded-lg border text-xs">
+              <div>
+                <span className="text-slate-500">Límite Crédito:</span> <span className="font-bold">${selectedCustomer.creditLimit.toLocaleString('es-AR')}</span>
+              </div>
+              <div>
+                <span className="text-slate-500">Saldo Actual:</span> <span className="font-extrabold text-red-600 text-sm">${selectedCustomer.currentBalance.toLocaleString('es-AR')}</span>
+              </div>
+              <button
+                onClick={() => {
+                  const txs = appState.customerTransactions.filter(t => t.customerId === selectedCustomer.id);
+                  generateCustomerAccountStatementPDF(selectedCustomer, txs, appState.storeInfo);
+                }}
+                className="px-3 py-1 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-500 flex items-center space-x-1"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>Exportar PDF</span>
+              </button>
+            </div>
+
+            <div className="max-h-72 overflow-y-auto border rounded-lg">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-slate-100 text-slate-600 uppercase font-semibold text-[10px]">
+                  <tr>
+                    <th className="p-2.5">Fecha</th>
+                    <th className="p-2.5">Concepto</th>
+                    <th className="p-2.5">Tipo</th>
+                    <th className="p-2.5 text-right">Monto</th>
+                    <th className="p-2.5 text-right">Saldo Restante</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {appState.customerTransactions
+                    .filter(t => t.customerId === selectedCustomer.id)
+                    .map(tx => (
+                      <tr key={tx.id} className="hover:bg-slate-50">
+                        <td className="p-2.5 text-slate-500">{new Date(tx.date).toLocaleDateString('es-AR')}</td>
+                        <td className="p-2.5 font-medium text-slate-800">{tx.description}</td>
+                        <td className="p-2.5">
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            tx.type === 'sale' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            {tx.type === 'sale' ? 'Venta Cta Cte' : 'Pago / Entrega'}
+                          </span>
+                        </td>
+                        <td className={`p-2.5 text-right font-bold ${tx.type === 'payment' ? 'text-emerald-600' : 'text-slate-900'}`}>
+                          {tx.type === 'payment' ? `-$${tx.amount.toLocaleString('es-AR')}` : `+$${tx.amount.toLocaleString('es-AR')}`}
+                        </td>
+                        <td className="p-2.5 text-right font-bold text-slate-900">${tx.balanceAfter.toLocaleString('es-AR')}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Entry Modal */}
+      {isPaymentModalOpen && payingCustomer && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-xs">
+            <h3 className="font-bold text-slate-900 text-base">Registrar Cobro / Entrega a Cuenta</h3>
+            <p className="text-slate-600 font-semibold">{payingCustomer.name} (Saldo actual: ${payingCustomer.currentBalance.toLocaleString('es-AR')})</p>
+
+            <form onSubmit={handleRegisterPayment} className="space-y-3">
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Monto de Entrega / Pago ($) *</label>
+                <input
+                  type="number"
+                  min="1"
+                  step="any"
+                  required
+                  value={paymentAmount}
+                  onChange={e => setPaymentAmount(e.target.value ? Number(e.target.value) : '')}
+                  className="w-full px-3 py-2 border rounded bg-slate-50 font-bold text-slate-900 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Medio de Pago</label>
+                <select
+                  value={paymentMethod}
+                  onChange={e => setPaymentMethod(e.target.value as any)}
+                  className="w-full px-3 py-1.5 border rounded bg-slate-50"
+                >
+                  <option value="cash">Efectivo</option>
+                  <option value="transfer">Transferencia Bancaria</option>
+                  <option value="cheque">Cheque</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Observaciones / Recibo</label>
+                <input
+                  type="text"
+                  value={paymentNotes}
+                  onChange={e => setPaymentNotes(e.target.value)}
+                  className="w-full px-3 py-1.5 border rounded bg-slate-50"
+                  placeholder="Ej. Transferencia Banco Galicia 9901"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsPaymentModalOpen(false)}
+                  className="px-4 py-2 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+                >
+                  Confirmar Cobro
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create / Edit Customer Modal */}
+      {isCustomerModalOpen && editingCustomer && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-xs">
+            <h3 className="font-bold text-slate-900 text-base">Registrar / Editar Cliente</h3>
+
+            <form onSubmit={handleSaveCustomer} className="space-y-3">
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Nombre Completo / Razón Social *</label>
+                <input
+                  type="text"
+                  required
+                  value={editingCustomer.name || ''}
+                  onChange={e => setEditingCustomer({ ...editingCustomer, name: e.target.value })}
+                  className="w-full px-3 py-1.5 border rounded bg-slate-50"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">DNI / CUIT</label>
+                  <input
+                    type="text"
+                    value={editingCustomer.dniCuit || ''}
+                    onChange={e => setEditingCustomer({ ...editingCustomer, dniCuit: e.target.value })}
+                    className="w-full px-3 py-1.5 border rounded bg-slate-50"
+                  />
+                </div>
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">Teléfono</label>
+                  <input
+                    type="text"
+                    value={editingCustomer.phone || ''}
+                    onChange={e => setEditingCustomer({ ...editingCustomer, phone: e.target.value })}
+                    className="w-full px-3 py-1.5 border rounded bg-slate-50"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Email</label>
+                <input
+                  type="email"
+                  value={editingCustomer.email || ''}
+                  onChange={e => setEditingCustomer({ ...editingCustomer, email: e.target.value })}
+                  className="w-full px-3 py-1.5 border rounded bg-slate-50"
+                />
+              </div>
+
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Límite de Crédito ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editingCustomer.creditLimit || ''}
+                  onChange={e => setEditingCustomer({ ...editingCustomer, creditLimit: Number(e.target.value) })}
+                  className="w-full px-3 py-1.5 border rounded bg-slate-50"
+                />
+              </div>
+
+              <div className="flex justify-end space-x-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsCustomerModalOpen(false)}
+                  className="px-4 py-2 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-bold"
+                >
+                  Guardar Cliente
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

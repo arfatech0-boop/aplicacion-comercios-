@@ -1,0 +1,6 @@
+{
+  "name": "GestiónComercio Pro",
+  "description": "Sistema integral de gestión comercial en tiempo real: inventario, aumento global por proveedor, ventas POS, cuenta corriente, cheques, caja diaria, retiros de cliente y reportes exportables a PDF/Excel.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
