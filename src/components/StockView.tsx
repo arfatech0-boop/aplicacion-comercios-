@@ -534,88 +534,107 @@ export const StockView: React.FC<StockViewProps> = ({ appState }) => {
                 />
               </div>
 
-              {/* Talle, Color y Marca Section */}
-              <div className="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-xs text-indigo-900 flex items-center space-x-1">
-                    <Tag className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Talle, Color & Marca (Indumentaria / Variantes)</span>
-                  </span>
-                  <span className="text-[10px] text-indigo-600 font-semibold">Opcional para ropa o medida</span>
-                </div>
+              {/* Adaptable Variants Section according to Business Rubro */}
+              {(() => {
+                const bType = (appState.storeInfo.businessType || '').toLowerCase();
+                const isClothing = bType.includes('indumentaria') || bType.includes('ropa') || bType.includes('calzado');
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {/* Size / Talle */}
-                  <div>
-                    <label className="font-semibold text-slate-700 block mb-1">Talle / Medida</label>
-                    <input
-                      type="text"
-                      value={editingProduct.size || ''}
-                      onChange={e => setEditingProduct({ ...editingProduct, size: e.target.value })}
-                      className="w-full px-2.5 py-1.5 border rounded bg-white text-xs font-bold focus:ring-1 focus:ring-indigo-500"
-                      placeholder="Ej. M, L, XL, 42, 50kg..."
-                    />
-                    {/* Quick Talle Chips */}
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {['XS', 'S', 'M', 'L', 'XL', 'XXL', '38', '40', '42', '44'].map(talle => (
-                        <button
-                          key={talle}
-                          type="button"
-                          onClick={() => setEditingProduct({ ...editingProduct, size: talle })}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors ${
-                            editingProduct.size === talle
-                              ? 'bg-indigo-600 text-white border-indigo-600'
-                              : 'bg-white text-slate-700 border-slate-300 hover:bg-indigo-100'
-                          }`}
-                        >
-                          {talle}
-                        </button>
-                      ))}
+                return (
+                  <div className="bg-indigo-50/50 p-3 rounded-xl border border-indigo-100 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-indigo-900 flex items-center space-x-1">
+                        <Tag className="w-3.5 h-3.5 text-indigo-600" />
+                        <span>
+                          {isClothing ? 'Talle, Color & Marca (Indumentaria)' : 'Marca & Presentación (Opcional)'}
+                        </span>
+                      </span>
+                      <span className="text-[10px] text-indigo-600 font-semibold">
+                        {isClothing ? 'Opcional para prendas o calzado' : 'Opcional para especificar presentación'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* Size / Presentación */}
+                      <div>
+                        <label className="font-semibold text-slate-700 block mb-1">
+                          {isClothing ? 'Talle / Medida' : 'Presentación / Medida'}
+                        </label>
+                        <input
+                          type="text"
+                          value={editingProduct.size || ''}
+                          onChange={e => setEditingProduct({ ...editingProduct, size: e.target.value })}
+                          className="w-full px-2.5 py-1.5 border rounded bg-white text-xs font-bold focus:ring-1 focus:ring-indigo-500"
+                          placeholder={isClothing ? 'Ej. M, L, XL, 42...' : 'Ej. 1.5 Litros, 500g, 50kg...'}
+                        />
+                        {/* Quick Talle Chips only for clothing */}
+                        {isClothing && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {['XS', 'S', 'M', 'L', 'XL', 'XXL', '38', '40', '42', '44'].map(talle => (
+                              <button
+                                key={talle}
+                                type="button"
+                                onClick={() => setEditingProduct({ ...editingProduct, size: talle })}
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                                  editingProduct.size === talle
+                                    ? 'bg-indigo-600 text-white border-indigo-600'
+                                    : 'bg-white text-slate-700 border-slate-300 hover:bg-indigo-100'
+                                }`}
+                              >
+                                {talle}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Color / Variante / Sabor */}
+                      <div>
+                        <label className="font-semibold text-slate-700 block mb-1">
+                          {isClothing ? 'Color / Variante' : 'Variante / Sabor / Color'}
+                        </label>
+                        <input
+                          type="text"
+                          value={editingProduct.color || ''}
+                          onChange={e => setEditingProduct({ ...editingProduct, color: e.target.value })}
+                          className="w-full px-2.5 py-1.5 border rounded bg-white text-xs font-bold focus:ring-1 focus:ring-indigo-500"
+                          placeholder={isClothing ? 'Ej. Negro, Blanco, Azul...' : 'Ej. Descremada, Sin Azúcar, Original...'}
+                        />
+                        {/* Quick Color Chips only for clothing */}
+                        {isClothing && (
+                          <div className="flex flex-wrap gap-1 mt-1.5">
+                            {['Negro', 'Blanco', 'Azul', 'Rojo', 'Verde', 'Gris'].map(col => (
+                              <button
+                                key={col}
+                                type="button"
+                                onClick={() => setEditingProduct({ ...editingProduct, color: col })}
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors ${
+                                  editingProduct.color === col
+                                    ? 'bg-slate-900 text-white border-slate-900'
+                                    : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                                }`}
+                              >
+                                {col}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Brand / Marca */}
+                      <div>
+                        <label className="font-semibold text-slate-700 block mb-1">Marca / Fabricante</label>
+                        <input
+                          type="text"
+                          value={editingProduct.brand || ''}
+                          onChange={e => setEditingProduct({ ...editingProduct, brand: e.target.value })}
+                          className="w-full px-2.5 py-1.5 border rounded bg-white text-xs font-bold focus:ring-1 focus:ring-indigo-500"
+                          placeholder={isClothing ? "Ej. Nike, Levi's..." : "Ej. La Serenísima, Coca-Cola, Arcor..."}
+                        />
+                      </div>
                     </div>
                   </div>
-
-                  {/* Color */}
-                  <div>
-                    <label className="font-semibold text-slate-700 block mb-1">Color / Variante</label>
-                    <input
-                      type="text"
-                      value={editingProduct.color || ''}
-                      onChange={e => setEditingProduct({ ...editingProduct, color: e.target.value })}
-                      className="w-full px-2.5 py-1.5 border rounded bg-white text-xs font-bold focus:ring-1 focus:ring-indigo-500"
-                      placeholder="Ej. Negro, Blanco, Azul..."
-                    />
-                    {/* Quick Color Chips */}
-                    <div className="flex flex-wrap gap-1 mt-1.5">
-                      {['Negro', 'Blanco', 'Azul', 'Rojo', 'Verde', 'Gris'].map(col => (
-                        <button
-                          key={col}
-                          type="button"
-                          onClick={() => setEditingProduct({ ...editingProduct, color: col })}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-colors ${
-                            editingProduct.color === col
-                              ? 'bg-slate-900 text-white border-slate-900'
-                              : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
-                          }`}
-                        >
-                          {col}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Brand / Marca */}
-                  <div>
-                    <label className="font-semibold text-slate-700 block mb-1">Marca / Fabricante</label>
-                    <input
-                      type="text"
-                      value={editingProduct.brand || ''}
-                      onChange={e => setEditingProduct({ ...editingProduct, brand: e.target.value })}
-                      className="w-full px-2.5 py-1.5 border rounded bg-white text-xs font-bold focus:ring-1 focus:ring-indigo-500"
-                      placeholder="Ej. Nike, Levi's, DeWalt..."
-                    />
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
