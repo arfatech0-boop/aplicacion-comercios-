@@ -22,7 +22,7 @@ import {
   FileCheck,
   Printer
 } from 'lucide-react';
-import { AppState, Customer, CustomerTransaction, Sale, InvoiceType, PaymentMethod, TaxCondition } from '../types';
+import { AppState, Customer, CustomerTransaction, Sale, InvoiceType, PaymentMethod, TaxCondition, Cheque } from '../types';
 import { DataService } from '../services/dataService';
 import { exportCustomersExcel } from '../utils/excelExporter';
 import { generateCustomerAccountStatementPDF, generateSaleInvoicePDF } from '../utils/pdfGenerator';
@@ -47,6 +47,14 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
   const [paymentNotes, setPaymentNotes] = useState('');
   const [paymentEmitInvoice, setPaymentEmitInvoice] = useState(false);
   const [paymentInvoiceType, setPaymentInvoiceType] = useState<InvoiceType>('FACTURA_B');
+
+  // Cheque Form State (para registrar en Cartera de Cheques)
+  const [chequeNumber, setChequeNumber] = useState('');
+  const [chequeBank, setChequeBank] = useState('Banco Galicia');
+  const [chequeIssuerName, setChequeIssuerName] = useState('');
+  const [chequeIssuerCuit, setChequeIssuerCuit] = useState('');
+  const [chequeDueDate, setChequeDueDate] = useState('');
+  const [chequeNotes, setChequeNotes] = useState('');
 
   // Billing Modal State (Facturar directamente desde Cuentas Corrientes)
   const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
@@ -202,12 +210,39 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
     if (!payingCustomer || !paymentAmount || Number(paymentAmount) <= 0) return;
 
     const amt = Number(paymentAmount);
+    let effectiveNotes = paymentNotes;
+
+    // Si el medio de pago es cheque, se guarda en la Cartera de Cheques
+    if (paymentMethod === 'cheque') {
+      if (!chequeNumber || !chequeBank) {
+        alert('Debe ingresar al menos el Número de Cheque y el Banco Emisor.');
+        return;
+      }
+
+      const newCheque: Cheque = {
+        id: `chq-${Date.now()}`,
+        number: chequeNumber,
+        bank: chequeBank,
+        issuerName: chequeIssuerName || payingCustomer.name,
+        issuerCuit: chequeIssuerCuit || payingCustomer.dniCuit,
+        customerId: payingCustomer.id,
+        customerName: payingCustomer.name,
+        amount: amt,
+        issueDate: new Date().toISOString().slice(0, 10),
+        dueDate: chequeDueDate || new Date().toISOString().slice(0, 10),
+        status: 'in_wallet',
+        notes: chequeNotes || `Recibido de ${payingCustomer.name}`
+      };
+
+      await DataService.saveCheque(newCheque);
+      effectiveNotes = `Cheque N° ${chequeNumber} (${chequeBank}) ${paymentNotes ? '- ' + paymentNotes : ''}`;
+    }
 
     await DataService.registerCustomerPayment({
       customerId: payingCustomer.id,
       amount: amt,
       paymentMethod,
-      notes: paymentNotes
+      notes: effectiveNotes
     });
 
     if (shouldEmitPDF || paymentEmitInvoice) {
@@ -242,8 +277,8 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
         discount: 0,
         surcharge: 0,
         totalAmount: amt,
-        paymentMethod: paymentMethod === 'cheque' ? 'cash' : paymentMethod,
-        notes: `Recibo de Cobranza Cta Cte: ${paymentNotes}`,
+        paymentMethod: paymentMethod === 'cheque' ? 'cheque' : paymentMethod,
+        notes: `Recibo de Cobranza Cta Cte: ${effectiveNotes}`,
         status: 'completed'
       };
 
@@ -255,8 +290,14 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
     setPaymentAmount('');
     setPaymentNotes('');
     setPaymentEmitInvoice(false);
+    setChequeNumber('');
+    setChequeBank('Banco Galicia');
+    setChequeIssuerName('');
+    setChequeIssuerCuit('');
+    setChequeDueDate('');
+    setChequeNotes('');
 
-    alert(`¡Entrega de dinero registrada con éxito${(shouldEmitPDF || paymentEmitInvoice) ? ' e impresa en PDF' : ''}!`);
+    alert(`¡Entrega de dinero ${paymentMethod === 'cheque' ? 'y Cheque cargado en Cartera' : ''} registrada con éxito${(shouldEmitPDF || paymentEmitInvoice) ? ' e impresa en PDF' : ''}!`);
   };
 
   return (
@@ -570,14 +611,91 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
                 <label className="font-semibold text-slate-700 block mb-1">Medio de Pago</label>
                 <select
                   value={paymentMethod}
-                  onChange={e => setPaymentMethod(e.target.value as any)}
+                  onChange={e => {
+                    const m = e.target.value as any;
+                    setPaymentMethod(m);
+                    if (m === 'cheque') {
+                      if (!chequeIssuerName) setChequeIssuerName(payingCustomer.name);
+                      if (!chequeIssuerCuit) setChequeIssuerCuit(payingCustomer.dniCuit);
+                      if (!chequeDueDate) setChequeDueDate(new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
+                    }
+                  }}
                   className="w-full px-3 py-1.5 border rounded-lg bg-slate-50 font-semibold"
                 >
                   <option value="cash">Efectivo</option>
                   <option value="transfer">Transferencia Bancaria</option>
-                  <option value="cheque">Cheque</option>
+                  <option value="cheque">Cheque (Carga en Cartera)</option>
                 </select>
               </div>
+
+              {/* Cheque Detailed Form Panel */}
+              {paymentMethod === 'cheque' && (
+                <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200/80 space-y-2 text-xs">
+                  <div className="flex items-center space-x-1.5 text-amber-900 font-extrabold pb-1 border-b border-amber-200/60">
+                    <CreditCard className="w-4 h-4 text-amber-700" />
+                    <span>Datos del Cheque a Ingresar en Cartera</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-bold text-amber-900 block mb-0.5 text-[10px]">N° de Cheque *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ej. 00849201"
+                        value={chequeNumber}
+                        onChange={e => setChequeNumber(e.target.value)}
+                        className="w-full px-2.5 py-1 bg-white border border-amber-300 rounded font-mono font-bold text-slate-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-amber-900 block mb-0.5 text-[10px]">Banco Emisor *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ej. Banco Galicia / Santander"
+                        value={chequeBank}
+                        onChange={e => setChequeBank(e.target.value)}
+                        className="w-full px-2.5 py-1 bg-white border border-amber-300 rounded font-semibold text-slate-900"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-bold text-amber-900 block mb-0.5 text-[10px]">Librador / Titular</label>
+                      <input
+                        type="text"
+                        placeholder={payingCustomer.name}
+                        value={chequeIssuerName}
+                        onChange={e => setChequeIssuerName(e.target.value)}
+                        className="w-full px-2.5 py-1 bg-white border border-amber-300 rounded text-slate-900 font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="font-bold text-amber-900 block mb-0.5 text-[10px]">CUIT Librador</label>
+                      <input
+                        type="text"
+                        placeholder="20-12345678-9"
+                        value={chequeIssuerCuit}
+                        onChange={e => setChequeIssuerCuit(e.target.value)}
+                        className="w-full px-2.5 py-1 bg-white border border-amber-300 rounded text-slate-900 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-amber-900 block mb-0.5 text-[10px]">Fecha de Cobro / Vencimiento *</label>
+                    <input
+                      type="date"
+                      required
+                      value={chequeDueDate}
+                      onChange={e => setChequeDueDate(e.target.value)}
+                      className="w-full px-2.5 py-1 bg-white border border-amber-300 rounded font-bold text-slate-900"
+                    />
+                  </div>
+                </div>
+              )}
 
               <div>
                 <label className="font-semibold text-slate-700 block mb-1">Observaciones / Recibo</label>
@@ -586,7 +704,7 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
                   value={paymentNotes}
                   onChange={e => setPaymentNotes(e.target.value)}
                   className="w-full px-3 py-1.5 border rounded-lg bg-slate-50"
-                  placeholder="Ej. Transferencia Banco Galicia 9901"
+                  placeholder="Ej. Entregado en mano por el cliente"
                 />
               </div>
 

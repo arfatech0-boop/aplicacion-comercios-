@@ -171,9 +171,9 @@
       "email": "jcperez.elec@gmail.com",
       "address": "Av. Belgrano 1280",
       "creditLimit": 150000,
-      "currentBalance": 42500,
+      "currentBalance": 0,
       "notes": "Contratista de obras particulares",
-      "updatedAt": "2026-08-04T16:00:00.000Z"
+      "updatedAt": "2026-08-09T18:21:28.185Z"
     },
     {
       "id": "cust-3",
@@ -189,6 +189,26 @@
     }
   ],
   "customerTransactions": [
+    {
+      "id": "tx-1786299688185",
+      "customerId": "cust-2",
+      "type": "payment",
+      "amount": 1223,
+      "balanceAfter": 0,
+      "date": "2026-08-09T18:21:28.185Z",
+      "description": "Cobro Cuenta Corriente (cash) - A FAVOR",
+      "receiptNumber": "REC-688185"
+    },
+    {
+      "id": "tx-1786299653147",
+      "customerId": "cust-2",
+      "type": "payment",
+      "amount": 42500,
+      "balanceAfter": 0,
+      "date": "2026-08-09T18:20:53.147Z",
+      "description": "Cobro Cuenta Corriente (cheque) ",
+      "receiptNumber": "REC-653147"
+    },
     {
       "id": "tx-1786294504213",
       "customerId": "cust-1",
@@ -443,11 +463,20 @@
       "openDate": "2026-08-06T08:00:00.000Z",
       "initialAmount": 25000,
       "cashSales": 143500,
-      "accountPayments": 185000,
+      "accountPayments": 186223,
       "cashExpenses": 5000,
-      "expectedTotal": 348500,
+      "expectedTotal": 349723,
       "status": "open",
       "movements": [
+        {
+          "id": "mov-1786299688185",
+          "type": "in",
+          "amount": 1223,
+          "description": "Cobro Cta. Cte. Juan Carlos Pérez (Electricidad)",
+          "category": "customer_payment",
+          "date": "2026-08-09T18:21:28.185Z",
+          "paymentMethod": "cash"
+        },
         {
           "id": "mov-1786299435568",
           "type": "in",
