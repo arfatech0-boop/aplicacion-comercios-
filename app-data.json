@@ -263,6 +263,66 @@
   ],
   "sales": [
     {
+      "id": "sale-1786299435567",
+      "invoiceNumber": "FC-0001-00001056",
+      "invoiceType": "FACTURA_A",
+      "cae": "74370176182080",
+      "caeDueDate": "19/8/2026",
+      "customerCuitDni": "20-28991234-8",
+      "customerTaxCondition": "Responsable Inscripto",
+      "date": "2026-08-09T18:17:15.567Z",
+      "customerId": "cust-2",
+      "customerName": "Juan Carlos Pérez (Electricidad)",
+      "items": [
+        {
+          "productId": "billing-1786299435567",
+          "code": "SERV-01",
+          "productName": "Facturación de saldo en Cta. Cte. (Juan Carlos Pérez (Electricidad))",
+          "quantity": 1,
+          "unitPrice": 42500,
+          "costPrice": 0,
+          "subtotal": 42500
+        }
+      ],
+      "subtotal": 42500,
+      "discount": 0,
+      "surcharge": 0,
+      "totalAmount": 42500,
+      "paymentMethod": "cash",
+      "notes": "Facturado desde Cuentas Corrientes (Facturación de saldo en Cta. Cte. (Juan Carlos Pérez (Electricidad)))",
+      "status": "completed"
+    },
+    {
+      "id": "sale-1786299417646",
+      "invoiceNumber": "FC-0001-00001055",
+      "invoiceType": "FACTURA_A",
+      "cae": "74323156352828",
+      "caeDueDate": "19/8/2026",
+      "customerCuitDni": "20-28991234-8",
+      "customerTaxCondition": "Responsable Inscripto",
+      "date": "2026-08-09T18:16:57.646Z",
+      "customerId": "cust-2",
+      "customerName": "Juan Carlos Pérez (Electricidad)",
+      "items": [
+        {
+          "productId": "billing-1786299417646",
+          "code": "SERV-01",
+          "productName": "Facturación de saldo en Cta. Cte. (Juan Carlos Pérez (Electricidad))",
+          "quantity": 1,
+          "unitPrice": 42500,
+          "costPrice": 0,
+          "subtotal": 42500
+        }
+      ],
+      "subtotal": 42500,
+      "discount": 0,
+      "surcharge": 0,
+      "totalAmount": 42500,
+      "paymentMethod": "cash",
+      "notes": "Facturado desde Cuentas Corrientes (Facturación de saldo en Cta. Cte. (Juan Carlos Pérez (Electricidad)))",
+      "status": "completed"
+    },
+    {
       "id": "sale-201",
       "invoiceNumber": "FC-0001-00001050",
       "date": "2026-08-06T10:30:00.000Z",
@@ -382,12 +442,30 @@
       "id": "cash-today",
       "openDate": "2026-08-06T08:00:00.000Z",
       "initialAmount": 25000,
-      "cashSales": 58500,
+      "cashSales": 143500,
       "accountPayments": 185000,
       "cashExpenses": 5000,
-      "expectedTotal": 263500,
+      "expectedTotal": 348500,
       "status": "open",
       "movements": [
+        {
+          "id": "mov-1786299435568",
+          "type": "in",
+          "amount": 42500,
+          "description": "Venta FC-0001-00001056 (Efectivo)",
+          "category": "sale",
+          "date": "2026-08-09T18:17:15.567Z",
+          "paymentMethod": "cash"
+        },
+        {
+          "id": "mov-1786299417956",
+          "type": "in",
+          "amount": 42500,
+          "description": "Venta FC-0001-00001055 (Efectivo)",
+          "category": "sale",
+          "date": "2026-08-09T18:16:57.646Z",
+          "paymentMethod": "cash"
+        },
         {
           "id": "mov-1786294504213",
           "type": "in",

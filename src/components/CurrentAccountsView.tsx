@@ -45,6 +45,8 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
   const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'cheque'>('cash');
   const [paymentNotes, setPaymentNotes] = useState('');
+  const [paymentEmitInvoice, setPaymentEmitInvoice] = useState(false);
+  const [paymentInvoiceType, setPaymentInvoiceType] = useState<InvoiceType>('FACTURA_B');
 
   // Billing Modal State (Facturar directamente desde Cuentas Corrientes)
   const [isBillingModalOpen, setIsBillingModalOpen] = useState(false);
@@ -195,23 +197,66 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
     }
   };
 
-  const handleRegisterPayment = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleRegisterPayment = async (e: React.FormEvent, shouldEmitPDF: boolean = false) => {
+    if (e) e.preventDefault();
     if (!payingCustomer || !paymentAmount || Number(paymentAmount) <= 0) return;
+
+    const amt = Number(paymentAmount);
 
     await DataService.registerCustomerPayment({
       customerId: payingCustomer.id,
-      amount: Number(paymentAmount),
+      amount: amt,
       paymentMethod,
       notes: paymentNotes
     });
+
+    if (shouldEmitPDF || paymentEmitInvoice) {
+      const nextInvoiceNum = `FC-${appState.storeInfo.invoicePrefix}-${(appState.sales.length + 1052).toString().padStart(8, '0')}`;
+      const generatedCae = `743${Math.floor(10000000000 + Math.random() * 90000000000)}`;
+      const caeDueDate = new Date(Date.now() + 10 * 86400000).toLocaleDateString('es-AR');
+      const taxCond: TaxCondition = paymentInvoiceType === 'FACTURA_A' ? 'Responsable Inscripto' : 'Consumidor Final / General';
+
+      const invoiceSale: Sale = {
+        id: `sale-pay-${Date.now()}`,
+        invoiceNumber: nextInvoiceNum,
+        invoiceType: paymentInvoiceType,
+        cae: generatedCae,
+        caeDueDate,
+        customerCuitDni: payingCustomer.dniCuit || '20-00000000-0',
+        customerTaxCondition: taxCond,
+        date: new Date().toISOString(),
+        customerId: payingCustomer.id,
+        customerName: payingCustomer.name,
+        items: [
+          {
+            productId: `pay-item-${Date.now()}`,
+            code: 'REC-01',
+            productName: `Cobro / Entrega a Cuenta (${payingCustomer.name})`,
+            quantity: 1,
+            unitPrice: amt,
+            costPrice: 0,
+            subtotal: amt
+          }
+        ],
+        subtotal: amt,
+        discount: 0,
+        surcharge: 0,
+        totalAmount: amt,
+        paymentMethod: paymentMethod === 'cheque' ? 'cash' : paymentMethod,
+        notes: `Recibo de Cobranza Cta Cte: ${paymentNotes}`,
+        status: 'completed'
+      };
+
+      generateSaleInvoicePDF(invoiceSale, appState.storeInfo);
+    }
 
     setIsPaymentModalOpen(false);
     setPayingCustomer(null);
     setPaymentAmount('');
     setPaymentNotes('');
+    setPaymentEmitInvoice(false);
 
-    alert('¡Entrega de dinero / cobro registrado con éxito!');
+    alert(`¡Entrega de dinero registrada con éxito${(shouldEmitPDF || paymentEmitInvoice) ? ' e impresa en PDF' : ''}!`);
   };
 
   return (
@@ -492,11 +537,22 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
       {/* Payment Entry Modal */}
       {isPaymentModalOpen && payingCustomer && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-xs">
-            <h3 className="font-bold text-slate-900 text-base">Registrar Cobro / Entrega a Cuenta</h3>
-            <p className="text-slate-600 font-semibold">{payingCustomer.name} (Saldo actual: ${payingCustomer.currentBalance.toLocaleString('es-AR')})</p>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4 text-xs">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">Registrar Cobro / Entrega a Cuenta</h3>
+                <p className="text-xs text-slate-500 font-semibold">{payingCustomer.name} (Saldo actual: ${payingCustomer.currentBalance.toLocaleString('es-AR')})</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsPaymentModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
-            <form onSubmit={handleRegisterPayment} className="space-y-3">
+            <form onSubmit={e => handleRegisterPayment(e, false)} className="space-y-3">
               <div>
                 <label className="font-semibold text-slate-700 block mb-1">Monto de Entrega / Pago ($) *</label>
                 <input
@@ -506,7 +562,7 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
                   required
                   value={paymentAmount}
                   onChange={e => setPaymentAmount(e.target.value ? Number(e.target.value) : '')}
-                  className="w-full px-3 py-2 border rounded bg-slate-50 font-bold text-slate-900 text-sm"
+                  className="w-full px-3 py-2 border rounded-lg bg-slate-50 font-extrabold text-slate-900 text-sm focus:ring-2 focus:ring-emerald-500"
                 />
               </div>
 
@@ -515,7 +571,7 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
                 <select
                   value={paymentMethod}
                   onChange={e => setPaymentMethod(e.target.value as any)}
-                  className="w-full px-3 py-1.5 border rounded bg-slate-50"
+                  className="w-full px-3 py-1.5 border rounded-lg bg-slate-50 font-semibold"
                 >
                   <option value="cash">Efectivo</option>
                   <option value="transfer">Transferencia Bancaria</option>
@@ -529,25 +585,76 @@ export const CurrentAccountsView: React.FC<CurrentAccountsViewProps> = ({ appSta
                   type="text"
                   value={paymentNotes}
                   onChange={e => setPaymentNotes(e.target.value)}
-                  className="w-full px-3 py-1.5 border rounded bg-slate-50"
+                  className="w-full px-3 py-1.5 border rounded-lg bg-slate-50"
                   placeholder="Ej. Transferencia Banco Galicia 9901"
                 />
               </div>
 
-              <div className="flex justify-end space-x-2 pt-3">
+              {/* Invoicing Section inside Payment Modal */}
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <label className="flex items-center space-x-2 cursor-pointer font-bold text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={paymentEmitInvoice}
+                    onChange={e => setPaymentEmitInvoice(e.target.checked)}
+                    className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <span>🧾 Emitir e Imprimir Factura / Comprobante PDF</span>
+                </label>
+
+                {paymentEmitInvoice && (
+                  <div className="bg-indigo-50/70 p-3 rounded-xl border border-indigo-100 space-y-2">
+                    <label className="font-bold text-indigo-900 block text-[11px]">Tipo de Comprobante AFIP:</label>
+                    <div className="grid grid-cols-4 gap-1 text-center text-xs">
+                      {[
+                        { id: 'FACTURA_B', label: 'Factura B' },
+                        { id: 'FACTURA_A', label: 'Factura A' },
+                        { id: 'FACTURA_C', label: 'Factura C' },
+                        { id: 'TICKET_X', label: 'Ticket X' }
+                      ].map(t => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setPaymentInvoiceType(t.id as InvoiceType)}
+                          className={`py-1.5 px-1 rounded-md border font-bold text-[10px] transition-all ${
+                            paymentInvoiceType === t.id
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between pt-4 border-t border-slate-100 gap-2">
                 <button
                   type="button"
                   onClick={() => setIsPaymentModalOpen(false)}
-                  className="px-4 py-2 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold"
+                  className="px-3 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs"
                 >
                   Cancelar
                 </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
-                >
-                  Confirmar Cobro
-                </button>
+
+                <div className="flex items-center space-x-1.5">
+                  <button
+                    type="submit"
+                    className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-colors"
+                  >
+                    Confirmar Cobro
+                  </button>
+                  <button
+                    type="button"
+                    onClick={e => handleRegisterPayment(e, true)}
+                    className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-md flex items-center space-x-1 transition-colors"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    <span>Confirmar y Facturar PDF</span>
+                  </button>
+                </div>
               </div>
             </form>
           </div>
