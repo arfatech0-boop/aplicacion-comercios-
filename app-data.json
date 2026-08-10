@@ -13,48 +13,6 @@
     "cashDiscountPercent": 5,
     "cardSurchargePercent": 10,
     "receiptHeaderMessage": "¡Gracias por su compra! Conserve este comprobante.",
-    "defaultCounterInvoiceType": "FACTURA_B",
-    "defaultCurrentAccountInvoiceType": "REMITO",
-    "defaultRespInscriptoInvoiceType": "FACTURA_A",
-    "afipPointOfSale": "0001",
-    "cardInterestPlans": [
-      {
-        "id": "p1",
-        "name": "Débito / 1 Pago Efectivo",
-        "surchargePercent": 0,
-        "description": "Sin recargo"
-      },
-      {
-        "id": "p2",
-        "name": "Visa / Mastercard 1 Pago",
-        "surchargePercent": 5,
-        "description": "Recargo contado Posnet"
-      },
-      {
-        "id": "p3",
-        "name": "Mercado Pago / QR",
-        "surchargePercent": 8,
-        "description": "Tasa cobro digital"
-      },
-      {
-        "id": "p4",
-        "name": "3 Cuotas (Cuota Simple)",
-        "surchargePercent": 15,
-        "description": "Plan nacional 3 pagos"
-      },
-      {
-        "id": "p5",
-        "name": "6 Cuotas Financiamiento",
-        "surchargePercent": 28,
-        "description": "Plan banco 6 pagos"
-      },
-      {
-        "id": "p6",
-        "name": "12 Cuotas Larga Duración",
-        "surchargePercent": 42,
-        "description": "Plan banco 12 pagos"
-      }
-    ],
     "customCategories": [
       "Construcción",
       "Pinturas",
@@ -62,8 +20,62 @@
       "Electricidad",
       "Ferretería",
       "General"
-    ]
+    ],
+    "cardInterestPlans": [
+      {
+        "id": "p1",
+        "name": "Débito / 1 Pago Efectivo",
+        "description": "Sin recargo",
+        "surchargePercent": 0
+      },
+      {
+        "id": "p2",
+        "name": "Visa / Mastercard 1 Pago",
+        "description": "Recargo contado Posnet",
+        "surchargePercent": 5
+      },
+      {
+        "id": "p3",
+        "name": "Mercado Pago / QR",
+        "description": "Tasa cobro digital",
+        "surchargePercent": 8
+      },
+      {
+        "id": "p4",
+        "name": "3 Cuotas (Cuota Simple)",
+        "description": "Plan nacional 3 pagos",
+        "surchargePercent": 15
+      },
+      {
+        "id": "p5",
+        "name": "6 Cuotas Financiamiento",
+        "description": "Plan banco 6 pagos",
+        "surchargePercent": 28
+      },
+      {
+        "id": "p6",
+        "name": "12 Cuotas Larga Duración",
+        "description": "Plan banco 12 pagos",
+        "surchargePercent": 42
+      }
+    ],
+    "defaultCounterInvoiceType": "FACTURA_B",
+    "defaultCurrentAccountInvoiceType": "REMITO",
+    "defaultRespInscriptoInvoiceType": "FACTURA_A",
+    "afipPointOfSale": "0001"
   },
+  "users": [
+    {
+      "id": "user-admin-default",
+      "username": "admin",
+      "password": "admin",
+      "name": "Administrador Principal",
+      "role": "admin",
+      "active": true,
+      "createdAt": "2026-08-01T00:00:00+00:00",
+      "lastLogin": "2026-08-09T19:25:35.672+00:00"
+    }
+  ],
   "suppliers": [
     {
       "id": "sup-1",
@@ -106,9 +118,10 @@
       "minStock": 20,
       "unit": "un",
       "size": "50 kg",
+      "color": "",
       "brand": "Loma Negra",
       "description": "Bolsa de cemento hidratado de alto rendimiento 50kg",
-      "updatedAt": "2026-08-09T19:17:42.179Z"
+      "updatedAt": "2026-08-09T19:17:42.179+00:00"
     },
     {
       "id": "prod-fer-2",
@@ -122,9 +135,10 @@
       "minStock": 15,
       "unit": "un",
       "size": "25 kg",
+      "color": "",
       "brand": "Horcajo",
       "description": "Bolsa de cal común hidratada para construcción",
-      "updatedAt": "2026-08-09T19:17:42.179Z"
+      "updatedAt": "2026-08-09T19:17:42.179+00:00"
     },
     {
       "id": "prod-fer-3",
@@ -141,7 +155,7 @@
       "color": "Blanco Mate",
       "brand": "Albalatex",
       "description": "Látex super lavable blanco mate para interiores",
-      "updatedAt": "2026-08-09T19:17:42.179Z"
+      "updatedAt": "2026-08-09T19:17:42.179+00:00"
     },
     {
       "id": "prod-fer-4",
@@ -158,7 +172,7 @@
       "color": "Negro Satinado",
       "brand": "Tersuave",
       "description": "Esmalte antioxidante para maderas y metales",
-      "updatedAt": "2026-08-09T19:17:42.179Z"
+      "updatedAt": "2026-08-09T19:17:42.179+00:00"
     },
     {
       "id": "prod-fer-5",
@@ -171,9 +185,11 @@
       "stock": 8,
       "minStock": 4,
       "unit": "un",
+      "size": "",
+      "color": "",
       "brand": "FV",
       "description": "Monocomando pico alto metálico cromado FV",
-      "updatedAt": "2026-08-09T19:17:42.179Z"
+      "updatedAt": "2026-08-09T19:17:42.179+00:00"
     },
     {
       "id": "prod-fer-6",
@@ -187,9 +203,10 @@
       "minStock": 3,
       "unit": "un",
       "size": "13mm",
+      "color": "",
       "brand": "DeWalt",
       "description": "Taladro industrial velocidad variable e inversión de giro",
-      "updatedAt": "2026-08-09T19:17:42.179Z"
+      "updatedAt": "2026-08-09T19:17:42.179+00:00"
     },
     {
       "id": "prod-fer-7",
@@ -203,22 +220,10 @@
       "minStock": 10,
       "unit": "pack",
       "size": "115mm",
+      "color": "",
       "brand": "Bosch",
       "description": "Discos ultra finos 1mm para amoladora angular",
-      "updatedAt": "2026-08-09T19:17:42.179Z"
-    }
-  ],
-  "priceIncreaseLogs": [
-    {
-      "id": "inc-1",
-      "supplierId": "sup-2",
-      "supplierName": "Materiales del Norte S.A.",
-      "percentage": 12.5,
-      "applyToCost": true,
-      "applyToSale": true,
-      "recalculateMargin": true,
-      "affectedProductsCount": 2,
-      "date": "2026-07-25T14:30:00.000Z"
+      "updatedAt": "2026-08-09T19:17:42.179+00:00"
     }
   ],
   "customers": [
@@ -232,7 +237,7 @@
       "creditLimit": 500000,
       "currentBalance": 0,
       "notes": "Cliente corporativo habitual. Pago a 30 días",
-      "updatedAt": "2026-08-09T16:55:04.213Z"
+      "updatedAt": "2026-08-09T16:55:04.213+00:00"
     },
     {
       "id": "cust-2",
@@ -244,7 +249,7 @@
       "creditLimit": 150000,
       "currentBalance": 0,
       "notes": "Contratista de obras particulares",
-      "updatedAt": "2026-08-09T18:21:28.185Z"
+      "updatedAt": "2026-08-09T18:21:28.185+00:00"
     },
     {
       "id": "cust-3",
@@ -256,7 +261,7 @@
       "creditLimit": 80000,
       "currentBalance": 0,
       "notes": "Cliente final recurrente",
-      "updatedAt": "2026-08-01T09:00:00.000Z"
+      "updatedAt": "2026-08-01T09:00:00+00:00"
     }
   ],
   "customerTransactions": [
@@ -266,9 +271,12 @@
       "type": "payment",
       "amount": 1223,
       "balanceAfter": 0,
-      "date": "2026-08-09T18:21:28.185Z",
+      "date": "2026-08-09T18:21:28.185+00:00",
       "description": "Cobro Cuenta Corriente (cash) - A FAVOR",
-      "receiptNumber": "REC-688185"
+      "receiptNumber": "REC-688185",
+      "saleId": null,
+      "itemsSummary": null,
+      "paymentMethod": null
     },
     {
       "id": "tx-1786299653147",
@@ -276,9 +284,12 @@
       "type": "payment",
       "amount": 42500,
       "balanceAfter": 0,
-      "date": "2026-08-09T18:20:53.147Z",
+      "date": "2026-08-09T18:20:53.147+00:00",
       "description": "Cobro Cuenta Corriente (cheque) ",
-      "receiptNumber": "REC-653147"
+      "receiptNumber": "REC-653147",
+      "saleId": null,
+      "itemsSummary": null,
+      "paymentMethod": null
     },
     {
       "id": "tx-1786294504213",
@@ -286,9 +297,12 @@
       "type": "payment",
       "amount": 185000,
       "balanceAfter": 0,
-      "date": "2026-08-09T16:55:04.213Z",
+      "date": "2026-08-09T16:55:04.213+00:00",
       "description": "Cobro Cuenta Corriente (cash) ",
-      "receiptNumber": "REC-504213"
+      "receiptNumber": "REC-504213",
+      "saleId": null,
+      "itemsSummary": null,
+      "paymentMethod": null
     },
     {
       "id": "tx-1",
@@ -296,9 +310,12 @@
       "type": "sale",
       "amount": 215000,
       "balanceAfter": 215000,
-      "date": "2026-07-28T11:00:00.000Z",
+      "date": "2026-07-28T11:00:00+00:00",
       "description": "Venta FC-0001-00001042 a Cuenta Corriente",
-      "saleId": "sale-101"
+      "receiptNumber": null,
+      "saleId": "sale-101",
+      "itemsSummary": null,
+      "paymentMethod": null
     },
     {
       "id": "tx-2",
@@ -306,9 +323,12 @@
       "type": "payment",
       "amount": 30000,
       "balanceAfter": 185000,
-      "date": "2026-08-02T15:30:00.000Z",
+      "date": "2026-08-02T15:30:00+00:00",
       "description": "Pago parcial de cuenta corriente - Transferencia",
-      "receiptNumber": "REC-0001-0089"
+      "receiptNumber": "REC-0001-0089",
+      "saleId": null,
+      "itemsSummary": null,
+      "paymentMethod": null
     },
     {
       "id": "tx-3",
@@ -316,9 +336,12 @@
       "type": "sale",
       "amount": 42500,
       "balanceAfter": 42500,
-      "date": "2026-08-04T16:00:00.000Z",
+      "date": "2026-08-04T16:00:00+00:00",
       "description": "Venta FC-0001-00001048 a Cuenta Corriente",
-      "saleId": "sale-102"
+      "receiptNumber": null,
+      "saleId": "sale-102",
+      "itemsSummary": null,
+      "paymentMethod": null
     }
   ],
   "withdrawals": [
@@ -327,23 +350,23 @@
       "withdrawalNumber": "RET-0001-00045",
       "customerId": "cust-1",
       "customerName": "Constructora Horizon S.R.L.",
-      "date": "2026-08-03T10:15:00.000Z",
+      "date": "2026-08-03T10:15:00+00:00",
       "items": [
         {
-          "productId": "prod-1",
-          "productCode": "779123456001",
-          "productName": "Cemento Portland 50kg Loma Negra",
           "quantity": 10,
+          "productId": "prod-1",
           "unitPrice": 10500,
-          "totalPrice": 105000
+          "totalPrice": 105000,
+          "productCode": "779123456001",
+          "productName": "Cemento Portland 50kg Loma Negra"
         },
         {
-          "productId": "prod-2",
-          "productCode": "779123456002",
-          "productName": "Cal Hidratada 25kg Horcajo",
           "quantity": 5,
+          "productId": "prod-2",
           "unitPrice": 4200,
-          "totalPrice": 21000
+          "totalPrice": 21000,
+          "productCode": "779123456002",
+          "productName": "Cal Hidratada 25kg Horcajo"
         }
       ],
       "totalAmount": 126000,
@@ -361,18 +384,18 @@
       "caeDueDate": "19/8/2026",
       "customerCuitDni": "20-28991234-8",
       "customerTaxCondition": "Responsable Inscripto",
-      "date": "2026-08-09T18:17:15.567Z",
+      "date": "2026-08-09T18:17:15.567+00:00",
       "customerId": "cust-2",
       "customerName": "Juan Carlos Pérez (Electricidad)",
       "items": [
         {
-          "productId": "billing-1786299435567",
           "code": "SERV-01",
-          "productName": "Facturación de saldo en Cta. Cte. (Juan Carlos Pérez (Electricidad))",
           "quantity": 1,
-          "unitPrice": 42500,
+          "subtotal": 42500,
           "costPrice": 0,
-          "subtotal": 42500
+          "productId": "billing-1786299435567",
+          "unitPrice": 42500,
+          "productName": "Facturación de saldo en Cta. Cte. (Juan Carlos Pérez (Electricidad))"
         }
       ],
       "subtotal": 42500,
@@ -391,18 +414,18 @@
       "caeDueDate": "19/8/2026",
       "customerCuitDni": "20-28991234-8",
       "customerTaxCondition": "Responsable Inscripto",
-      "date": "2026-08-09T18:16:57.646Z",
+      "date": "2026-08-09T18:16:57.646+00:00",
       "customerId": "cust-2",
       "customerName": "Juan Carlos Pérez (Electricidad)",
       "items": [
         {
-          "productId": "billing-1786299417646",
           "code": "SERV-01",
-          "productName": "Facturación de saldo en Cta. Cte. (Juan Carlos Pérez (Electricidad))",
           "quantity": 1,
-          "unitPrice": 42500,
+          "subtotal": 42500,
           "costPrice": 0,
-          "subtotal": 42500
+          "productId": "billing-1786299417646",
+          "unitPrice": 42500,
+          "productName": "Facturación de saldo en Cta. Cte. (Juan Carlos Pérez (Electricidad))"
         }
       ],
       "subtotal": 42500,
@@ -416,88 +439,109 @@
     {
       "id": "sale-201",
       "invoiceNumber": "FC-0001-00001050",
-      "date": "2026-08-06T10:30:00.000Z",
+      "invoiceType": null,
+      "cae": null,
+      "caeDueDate": null,
+      "customerCuitDni": null,
+      "customerTaxCondition": null,
+      "date": "2026-08-06T10:30:00+00:00",
       "customerId": "cust-3",
       "customerName": "María Elena Soria",
       "items": [
         {
-          "productId": "prod-3",
           "code": "779123456003",
-          "productName": "Pintura Látex Interior Blanco 20L",
           "quantity": 1,
-          "unitPrice": 42000,
+          "subtotal": 42000,
           "costPrice": 28000,
-          "subtotal": 42000
+          "productId": "prod-3",
+          "unitPrice": 42000,
+          "productName": "Pintura Látex Interior Blanco 20L"
         },
         {
-          "productId": "prod-4",
           "code": "779123456004",
-          "productName": "Esmalte Sintético 4L Satinado",
           "quantity": 1,
-          "unitPrice": 16500,
+          "subtotal": 16500,
           "costPrice": 11000,
-          "subtotal": 16500
+          "productId": "prod-4",
+          "unitPrice": 16500,
+          "productName": "Esmalte Sintético 4L Satinado"
         }
       ],
       "subtotal": 58500,
       "discount": 0,
+      "surcharge": 0,
       "totalAmount": 58500,
       "paymentMethod": "cash",
-      "status": "completed",
-      "notes": "Venta contado mostrador"
+      "notes": "Venta contado mostrador",
+      "status": "completed"
     },
     {
       "id": "sale-202",
       "invoiceNumber": "FC-0001-00001051",
-      "date": "2026-08-06T14:15:00.000Z",
+      "invoiceType": null,
+      "cae": null,
+      "caeDueDate": null,
+      "customerCuitDni": null,
+      "customerTaxCondition": null,
+      "date": "2026-08-06T14:15:00+00:00",
       "customerId": "cust-2",
       "customerName": "Juan Carlos Pérez (Electricidad)",
       "items": [
         {
-          "productId": "prod-6",
           "code": "779123456006",
-          "productName": "Taladro Percutor 750W 13mm",
           "quantity": 1,
-          "unitPrice": 72000,
+          "subtotal": 72000,
           "costPrice": 48000,
-          "subtotal": 72000
+          "productId": "prod-6",
+          "unitPrice": 72000,
+          "productName": "Taladro Percutor 750W 13mm"
         },
         {
-          "productId": "prod-7",
           "code": "779123456007",
-          "productName": "Discos de Corte Metal 115mm (Pack x10)",
           "quantity": 2,
-          "unitPrice": 7500,
+          "subtotal": 15000,
           "costPrice": 4500,
-          "subtotal": 15000
+          "productId": "prod-7",
+          "unitPrice": 7500,
+          "productName": "Discos de Corte Metal 115mm (Pack x10)"
         }
       ],
       "subtotal": 87000,
       "discount": 2000,
+      "surcharge": 0,
       "totalAmount": 85000,
       "paymentMethod": "transfer",
-      "status": "completed",
-      "notes": "Descuento por pago contado transferencia"
+      "notes": "Descuento por pago contado transferencia",
+      "status": "completed"
     },
     {
       "id": "sale-203",
       "invoiceNumber": "FC-0001-00001049",
-      "date": "2026-08-05T17:40:00.000Z",
+      "invoiceType": null,
+      "cae": null,
+      "caeDueDate": null,
+      "customerCuitDni": null,
+      "customerTaxCondition": null,
+      "date": "2026-08-05T17:40:00+00:00",
+      "customerId": null,
+      "customerName": null,
       "items": [
         {
-          "productId": "prod-1",
           "code": "779123456001",
-          "productName": "Cemento Portland 50kg Loma Negra",
           "quantity": 5,
-          "unitPrice": 10500,
+          "subtotal": 52500,
           "costPrice": 7500,
-          "subtotal": 52500
+          "productId": "prod-1",
+          "unitPrice": 10500,
+          "productName": "Cemento Portland 50kg Loma Negra"
         }
       ],
       "subtotal": 52500,
       "discount": 0,
+      "surcharge": 0,
       "totalAmount": 52500,
       "paymentMethod": "card",
+      "notes": null,
       "status": "completed"
     }
   ],
@@ -511,8 +555,8 @@
       "customerId": "cust-1",
       "customerName": "Constructora Horizon S.R.L.",
       "amount": 120000,
-      "issueDate": "2026-08-01T00:00:00.000Z",
-      "dueDate": "2026-08-15T00:00:00.000Z",
+      "issueDate": "2026-08-01T00:00:00+00:00",
+      "dueDate": "2026-08-15T00:00:00+00:00",
       "status": "in_wallet",
       "notes": "Cheque diferido entregado a cuenta de factura anterior"
     },
@@ -521,9 +565,12 @@
       "number": "11928340",
       "bank": "Banco Nación",
       "issuerName": "Instalaciones SRL",
+      "issuerCuit": null,
+      "customerId": null,
+      "customerName": null,
       "amount": 75000,
-      "issueDate": "2026-07-20T00:00:00.000Z",
-      "dueDate": "2026-08-05T00:00:00.000Z",
+      "issueDate": "2026-07-20T00:00:00+00:00",
+      "dueDate": "2026-08-05T00:00:00+00:00",
       "status": "cashed",
       "notes": "Cobrado por ventanilla el 05/08"
     }
@@ -531,7 +578,8 @@
   "cashRegisters": [
     {
       "id": "cash-today",
-      "openDate": "2026-08-06T08:00:00.000Z",
+      "openDate": "2026-08-06T08:00:00+00:00",
+      "closeDate": null,
       "initialAmount": 25000,
       "cashSales": 143500,
       "accountPayments": 186223,
@@ -541,56 +589,56 @@
       "movements": [
         {
           "id": "mov-1786299688185",
+          "date": "2026-08-09T18:21:28.185Z",
           "type": "in",
           "amount": 1223,
-          "description": "Cobro Cta. Cte. Juan Carlos Pérez (Electricidad)",
           "category": "customer_payment",
-          "date": "2026-08-09T18:21:28.185Z",
+          "description": "Cobro Cta. Cte. Juan Carlos Pérez (Electricidad)",
           "paymentMethod": "cash"
         },
         {
           "id": "mov-1786299435568",
+          "date": "2026-08-09T18:17:15.567Z",
           "type": "in",
           "amount": 42500,
-          "description": "Venta FC-0001-00001056 (Efectivo)",
           "category": "sale",
-          "date": "2026-08-09T18:17:15.567Z",
+          "description": "Venta FC-0001-00001056 (Efectivo)",
           "paymentMethod": "cash"
         },
         {
           "id": "mov-1786299417956",
+          "date": "2026-08-09T18:16:57.646Z",
           "type": "in",
           "amount": 42500,
-          "description": "Venta FC-0001-00001055 (Efectivo)",
           "category": "sale",
-          "date": "2026-08-09T18:16:57.646Z",
+          "description": "Venta FC-0001-00001055 (Efectivo)",
           "paymentMethod": "cash"
         },
         {
           "id": "mov-1786294504213",
+          "date": "2026-08-09T16:55:04.213Z",
           "type": "in",
           "amount": 185000,
-          "description": "Cobro Cta. Cte. Constructora Horizon S.R.L.",
           "category": "customer_payment",
-          "date": "2026-08-09T16:55:04.213Z",
+          "description": "Cobro Cta. Cte. Constructora Horizon S.R.L.",
           "paymentMethod": "cash"
         },
         {
           "id": "mov-1",
+          "date": "2026-08-06T10:30:00.000Z",
           "type": "in",
           "amount": 58500,
-          "description": "Venta FC-0001-00001050 (Efectivo)",
           "category": "sale",
-          "date": "2026-08-06T10:30:00.000Z",
+          "description": "Venta FC-0001-00001050 (Efectivo)",
           "paymentMethod": "cash"
         },
         {
           "id": "mov-2",
+          "date": "2026-08-06T11:45:00.000Z",
           "type": "out",
           "amount": 5000,
-          "description": "Flete local envíos de insumos",
           "category": "expense",
-          "date": "2026-08-06T11:45:00.000Z",
+          "description": "Flete local envíos de insumos",
           "paymentMethod": "cash"
         }
       ],
@@ -606,7 +654,7 @@
       "quantity": 1,
       "previousStock": 13,
       "newStock": 12,
-      "date": "2026-08-06T10:30:00.000Z",
+      "date": "2026-08-06T10:30:00+00:00",
       "reason": "Venta FC-0001-00001050"
     },
     {
@@ -617,7 +665,7 @@
       "quantity": 1,
       "previousStock": 4,
       "newStock": 3,
-      "date": "2026-08-06T10:30:00.000Z",
+      "date": "2026-08-06T10:30:00+00:00",
       "reason": "Venta FC-0001-00001050"
     },
     {
@@ -628,20 +676,9 @@
       "quantity": 10,
       "previousStock": 55,
       "newStock": 45,
-      "date": "2026-08-03T10:15:00.000Z",
+      "date": "2026-08-03T10:15:00+00:00",
       "reason": "Retiro de cliente Constructora Horizon (RET-0001-00045)"
     }
   ],
-  "users": [
-    {
-      "id": "user-admin-default",
-      "username": "admin",
-      "password": "admin",
-      "name": "Administrador Principal",
-      "role": "admin",
-      "active": true,
-      "createdAt": "2026-08-01T00:00:00.000Z",
-      "lastLogin": "2026-08-09T19:25:35.672Z"
-    }
-  ]
+  "priceIncreaseLogs": []
 }

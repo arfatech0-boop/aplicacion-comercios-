@@ -5,6 +5,8 @@ import { createServer as createViteServer } from 'vite';
 import { initialAppData } from './src/data/mockData';
 import { AppState, Product, Supplier, Customer, Sale, CustomerWithdrawal, Cheque, CashRegister, SystemUser } from './src/types';
 
+import { SupabaseService } from './src/services/supabaseService';
+
 const app = express();
 const PORT = 3000;
 
@@ -15,18 +17,32 @@ const DATA_FILE = path.join(process.cwd(), 'app-data.json');
 
 let appState: AppState = { ...initialAppData };
 
-// Load data if exists
+// Load data if exists locally first
 if (fs.existsSync(DATA_FILE)) {
   try {
     const raw = fs.readFileSync(DATA_FILE, 'utf-8');
     appState = JSON.parse(raw);
-    console.log('[Server] Loaded persisted database state from file.');
+    console.log('[Server] Loaded persisted database state from local file.');
   } catch (err) {
     console.error('[Server] Failed to load data file, using default mock data.', err);
   }
 } else {
   saveState();
 }
+
+// Connect to Supabase Cloud Database & sync latest state
+async function loadFromSupabase() {
+  const remoteState = await SupabaseService.fetchAppState();
+  if (remoteState && remoteState.products && remoteState.products.length > 0) {
+    appState = remoteState;
+    console.log('[Server] 🚀 Connected to Supabase Cloud Database! Loaded remote state.');
+    saveState(); // Update local fallback
+  } else {
+    console.log('[Server] Operating with local file database / ready for Supabase sync.');
+  }
+}
+
+loadFromSupabase();
 
 function saveState() {
   try {
