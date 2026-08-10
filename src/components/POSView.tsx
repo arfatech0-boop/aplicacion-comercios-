@@ -376,33 +376,6 @@ export const POSView: React.FC<POSViewProps> = ({ appState, onOpenCardRates }) =
                 </span>
               )}
             </div>
-
-            {/* Category Chips */}
-            <div className="flex items-center space-x-2 overflow-x-auto pb-1 scrollbar-none pt-1">
-              <button
-                onClick={() => setSelectedCategory('ALL')}
-                className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                  selectedCategory === 'ALL'
-                    ? 'bg-indigo-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                Todas las categorías
-              </button>
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-colors ${
-                    selectedCategory === cat
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Product Grid */}
@@ -475,7 +448,6 @@ export const POSView: React.FC<POSViewProps> = ({ appState, onOpenCardRates }) =
                         )}
                       </div>
                     )}
-                    <span className="text-xs text-slate-500 block mt-0.5">{product.category}</span>
                   </div>
 
                   <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between">
