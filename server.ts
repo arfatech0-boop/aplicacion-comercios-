@@ -451,7 +451,7 @@ app.post('/api/customers', (req, res) => {
   }
   saveState();
   broadcastUpdate('CUSTOMERS_UPDATED', appState.customers);
-  res.json({ success: true, data: appState.customers });
+  res.json({ success: true, customer, customers: appState.customers });
 });
 
 // DELETE Customer
