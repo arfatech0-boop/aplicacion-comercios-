@@ -91,6 +91,9 @@ async function seedData() {
   // 4. Products
   if (Array.isArray(appState.products) && appState.products.length) {
     console.log(`📌 Seeding ${appState.products.length} products...`);
+    // Clear old demo products first
+    await supabase.from('products').delete().neq('id', 'keep-none');
+
     const products = appState.products.map((p: any) => ({
       id: p.id,
       code: p.code,
