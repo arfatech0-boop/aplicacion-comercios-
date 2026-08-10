@@ -344,37 +344,7 @@
       "paymentMethod": null
     }
   ],
-  "withdrawals": [
-    {
-      "id": "with-1",
-      "withdrawalNumber": "RET-0001-00045",
-      "customerId": "cust-1",
-      "customerName": "Constructora Horizon S.R.L.",
-      "date": "2026-08-03T10:15:00+00:00",
-      "items": [
-        {
-          "quantity": 10,
-          "productId": "prod-1",
-          "unitPrice": 10500,
-          "totalPrice": 105000,
-          "productCode": "779123456001",
-          "productName": "Cemento Portland 50kg Loma Negra"
-        },
-        {
-          "quantity": 5,
-          "productId": "prod-2",
-          "unitPrice": 4200,
-          "totalPrice": 21000,
-          "productCode": "779123456002",
-          "productName": "Cal Hidratada 25kg Horcajo"
-        }
-      ],
-      "totalAmount": 126000,
-      "status": "billed",
-      "notes": "Retirado por capataz Miguel Ángel. Pendiente de facturar a fin de mes.",
-      "authorizedBy": "Carlos Gómez (Encargado)"
-    }
-  ],
+  "withdrawals": [],
   "sales": [
     {
       "id": "sale-1786299435567",
