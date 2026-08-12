@@ -233,7 +233,6 @@ app.post('/api/suppliers/increase-prices', (req, res) => {
 
       if (applyToSale) {
         if (recalculateMargin && applyToCost) {
-          // Keep margin constant: margin = sale / oldCost => newSale = newCost * margin
           const marginRatio = p.salePrice / (p.costPrice || 1);
           newSale = Math.round(newCost * marginRatio);
         } else {
@@ -256,20 +255,20 @@ app.post('/api/suppliers/increase-prices', (req, res) => {
 
   const logEntry = {
     id: `inc-${Date.now()}`,
-    supplierId,
+    supplierId: supplierId || 'ALL',
     supplierName,
-    categoryFilter,
+    categoryFilter: categoryFilter || 'ALL',
     percentage,
-    applyToCost,
-    applyToSale,
-    recalculateMargin,
+    applyToCost: !!applyToCost,
+    applyToSale: !!applyToSale,
+    recalculateMargin: !!recalculateMargin,
     affectedProductsCount: count,
     date: new Date().toISOString()
   };
 
   appState.priceIncreaseLogs.unshift(logEntry);
   saveState();
-  broadcastUpdate('PRICE_INCREASE_APPLIED', { products: appState.products, log: logEntry });
+  broadcastUpdate('DATA_UPDATED', appState);
 
   res.json({ success: true, affectedCount: count, data: appState });
 });

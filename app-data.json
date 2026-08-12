@@ -1,5 +1,69 @@
 {
-  "storeInfo": {},
+  "storeInfo": {
+    "name": "Comercial Central Pro",
+    "cuit": "30-71234567-8",
+    "taxCondition": "Responsable Inscripto",
+    "businessType": "Comercio General / Multirrubro",
+    "address": "Av. San Martín 1450, Ciudad",
+    "phone": "011 4589-2310",
+    "email": "ventas@comercialcentral.com",
+    "invoicePrefix": "0001",
+    "currencySymbol": "$",
+    "defaultTaxRate": 21,
+    "cashDiscountPercent": 5,
+    "cardSurchargePercent": 10,
+    "receiptHeaderMessage": "¡Gracias por su compra! Conserve este comprobante.",
+    "customCategories": [
+      "Bazar & Hogar",
+      "Electrónica",
+      "Regalería",
+      "Librería",
+      "Kiosco",
+      "Bebidas"
+    ],
+    "cardInterestPlans": [
+      {
+        "id": "p1",
+        "name": "Débito / 1 Pago Efectivo",
+        "description": "Sin recargo",
+        "surchargePercent": 0
+      },
+      {
+        "id": "p2",
+        "name": "Visa / Mastercard 1 Pago",
+        "description": "Recargo contado Posnet",
+        "surchargePercent": 5
+      },
+      {
+        "id": "p3",
+        "name": "Mercado Pago / QR",
+        "description": "Tasa cobro digital",
+        "surchargePercent": 8
+      },
+      {
+        "id": "p4",
+        "name": "3 Cuotas (Cuota Simple)",
+        "description": "Plan nacional 3 pagos",
+        "surchargePercent": 15
+      },
+      {
+        "id": "p5",
+        "name": "6 Cuotas Financiamiento",
+        "description": "Plan banco 6 pagos",
+        "surchargePercent": 28
+      },
+      {
+        "id": "p6",
+        "name": "12 Cuotas Larga Duración",
+        "description": "Plan banco 12 pagos",
+        "surchargePercent": 42
+      }
+    ],
+    "defaultCounterInvoiceType": "FACTURA_B",
+    "defaultCurrentAccountInvoiceType": "REMITO",
+    "defaultRespInscriptoInvoiceType": "FACTURA_A",
+    "afipPointOfSale": "0001"
+  },
   "users": [
     {
       "id": "user-admin-default",
