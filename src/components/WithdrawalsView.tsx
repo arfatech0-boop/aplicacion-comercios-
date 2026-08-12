@@ -10,7 +10,9 @@ import {
   X,
   User,
   PlusCircle,
-  Clock
+  Clock,
+  Package,
+  FileCheck
 } from 'lucide-react';
 import { AppState, CustomerWithdrawal, WithdrawalItem, Customer } from '../types';
 import { DataService } from '../services/dataService';
@@ -359,105 +361,143 @@ export const WithdrawalsView: React.FC<WithdrawalsViewProps> = ({ appState }) =>
 
       {/* New Withdrawal Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-2xl space-y-4 text-xs">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="font-bold text-slate-900 text-base">Registrar Nuevo Retiro de Mercadería</h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-5 text-xs border border-slate-100 animate-fade-in">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 shadow-xs">
+                  <Package className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-base">Registrar Nuevo Retiro de Mercadería</h3>
+                  <p className="text-[11px] text-slate-500">Genere un remito oficial de entrega parcial o retiro a cuenta corriente.</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form onSubmit={handleSaveWithdrawal} className="space-y-4">
+              {/* Customer Selector */}
               <div>
-                <label className="font-semibold text-slate-700 block mb-1">Cliente que retira *</label>
+                <label className="font-bold text-slate-700 block mb-1">Cliente que retira *</label>
                 <select
                   value={selectedCustomer?.id || ''}
                   onChange={e => {
                     const c = appState.customers.find(cust => cust.id === e.target.value);
                     setSelectedCustomer(c || null);
                   }}
-                  className="w-full px-3 py-2 border rounded bg-slate-50 font-medium"
+                  className="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl bg-slate-50 text-slate-800 font-semibold focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-xs"
                 >
-                  <option value="">Seleccionar Cliente</option>
+                  <option value="">Seleccionar Cliente del Padrón</option>
                   {appState.customers.map(c => (
-                    <option key={c.id} value={c.id}>{c.name} ({c.dniCuit})</option>
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.dniCuit || 'Sin CUIT'}) - Saldo: ${c.currentBalance.toLocaleString('es-AR')}
+                    </option>
                   ))}
                 </select>
               </div>
 
-              {/* Add Product selector */}
-              <div className="p-3 bg-slate-50 rounded-lg border space-y-2">
-                <span className="font-bold text-slate-800 block">Agregar Productos a la Entrega</span>
-                <div className="flex gap-2">
+              {/* Add Product Selector Box */}
+              <div className="p-4 bg-indigo-50/40 rounded-xl border border-indigo-100/80 space-y-3">
+                <span className="font-bold text-xs text-indigo-950 flex items-center space-x-1.5">
+                  <Plus className="w-4 h-4 text-indigo-600" />
+                  <span>Agregar Productos a la Entrega</span>
+                </span>
+                
+                <div className="flex flex-col sm:flex-row items-center gap-2">
                   <select
                     value={selectedProductId}
                     onChange={e => setSelectedProductId(e.target.value)}
-                    className="flex-1 px-3 py-1.5 border rounded bg-white"
+                    className="w-full sm:flex-1 min-w-0 px-3 py-2 border border-slate-300 rounded-xl bg-white text-slate-800 text-xs focus:ring-2 focus:ring-indigo-500 font-medium"
                   >
-                    <option value="">Seleccionar Producto del Inventario</option>
+                    <option value="">Seleccionar Producto del Inventario...</option>
                     {appState.products.map(p => (
-                      <option key={p.id} value={p.id}>{p.name} (Stock: {p.stock} {p.unit}) - ${p.salePrice}</option>
+                      <option key={p.id} value={p.id}>
+                        {p.name} (Stock: {p.stock} {p.unit}) - ${p.salePrice.toLocaleString('es-AR')}
+                      </option>
                     ))}
                   </select>
-                  <input
-                    type="number"
-                    min="1"
-                    value={addQuantity}
-                    onChange={e => setAddQuantity(Number(e.target.value))}
-                    className="w-20 px-2 py-1.5 border rounded bg-white text-center font-bold"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddItemToWithdrawal}
-                    className="px-3 py-1.5 bg-indigo-600 text-white rounded font-bold hover:bg-indigo-500"
-                  >
-                    + Añadir
-                  </button>
+
+                  <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                    <input
+                      type="number"
+                      min="1"
+                      value={addQuantity}
+                      onChange={e => setAddQuantity(Number(e.target.value))}
+                      className="w-20 px-3 py-2 border border-slate-300 rounded-xl bg-white text-center font-extrabold text-slate-900 text-xs focus:ring-2 focus:ring-indigo-500"
+                      placeholder="Cant."
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddItemToWithdrawal}
+                      className="flex-1 sm:flex-initial px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all shadow-sm flex items-center justify-center space-x-1 shrink-0"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>Añadir</span>
+                    </button>
+                  </div>
                 </div>
               </div>
 
               {/* Added Items List */}
-              <div className="max-h-40 overflow-y-auto border rounded">
+              <div className="border border-slate-200 rounded-xl overflow-hidden shadow-xs">
                 <table className="w-full text-left">
-                  <thead className="bg-slate-100 font-semibold text-slate-600">
+                  <thead className="bg-slate-100/80 border-b border-slate-200 font-bold text-slate-700 text-[11px]">
                     <tr>
-                      <th className="p-2">Producto</th>
-                      <th className="p-2 text-center">Cant.</th>
-                      <th className="p-2 text-right">Total ($)</th>
-                      <th className="p-2"></th>
+                      <th className="py-2.5 px-3">Producto</th>
+                      <th className="py-2.5 px-3 text-center">Cant.</th>
+                      <th className="py-2.5 px-3 text-right">Precio Unit.</th>
+                      <th className="py-2.5 px-3 text-right">Subtotal ($)</th>
+                      <th className="py-2.5 px-2 text-center"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {items.map(item => (
-                      <tr key={item.productId}>
-                        <td className="p-2 font-medium text-slate-800">{item.productName}</td>
-                        <td className="p-2 text-center font-bold">{item.quantity}</td>
-                        <td className="p-2 text-right font-bold">${item.totalPrice.toLocaleString('es-AR')}</td>
-                        <td className="p-2 text-center">
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItem(item.productId)}
-                            className="text-slate-400 hover:text-red-600"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                  <tbody className="divide-y divide-slate-100 bg-white">
+                    {items.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-6 text-center text-slate-400 font-medium text-xs">
+                          No hay productos agregados a este retiro. Seleccione arriba y presione "+ Añadir".
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      items.map(item => (
+                        <tr key={item.productId} className="hover:bg-slate-50 transition-colors">
+                          <td className="py-2.5 px-3 font-semibold text-slate-800">{item.productName}</td>
+                          <td className="py-2.5 px-3 text-center font-extrabold text-slate-900 bg-slate-50/50">{item.quantity}</td>
+                          <td className="py-2.5 px-3 text-right text-slate-600">${item.unitPrice.toLocaleString('es-AR')}</td>
+                          <td className="py-2.5 px-3 text-right font-extrabold text-indigo-700">${item.totalPrice.toLocaleString('es-AR')}</td>
+                          <td className="py-2.5 px-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveItem(item.productId)}
+                              className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                              title="Quitar ítem"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Authorized By & Notes */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
                   <label className="font-semibold text-slate-700 block mb-1">Autorizado por / Empleado</label>
                   <input
                     type="text"
                     value={authorizedBy}
                     onChange={e => setAuthorizedBy(e.target.value)}
-                    className="w-full px-3 py-1.5 border rounded bg-slate-50"
-                    placeholder="Ej. Carlos Gómez"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-slate-50 text-xs focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-medium"
+                    placeholder="Ej. Carlos Gómez (Encargado)"
                   />
                 </div>
                 <div>
@@ -466,29 +506,33 @@ export const WithdrawalsView: React.FC<WithdrawalsViewProps> = ({ appState }) =>
                     type="text"
                     value={notes}
                     onChange={e => setNotes(e.target.value)}
-                    className="w-full px-3 py-1.5 border rounded bg-slate-50"
-                    placeholder="Ej. Retirado por chofer de la obra"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-xl bg-slate-50 text-xs focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all font-medium"
+                    placeholder="Ej. Retirado por chofer de la obra en camioneta"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-between items-center pt-3 border-t">
-                <span className="font-bold text-slate-900 text-sm">
-                  Total Estimado: ${totalWithdrawalAmount.toLocaleString('es-AR')}
-                </span>
-                <div className="space-x-2">
+              {/* Modal Footer */}
+              <div className="flex flex-col sm:flex-row justify-between items-center gap-3 pt-4 border-t border-slate-100">
+                <div className="bg-emerald-50 text-emerald-800 px-4 py-2 rounded-xl border border-emerald-200/80 font-extrabold text-sm w-full sm:w-auto flex items-center justify-between sm:justify-start space-x-2">
+                  <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Total Estimado:</span>
+                  <span className="text-base text-emerald-700 font-black">${totalWithdrawalAmount.toLocaleString('es-AR')}</span>
+                </div>
+                
+                <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 rounded bg-slate-100 text-slate-700 font-semibold"
+                    className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors"
                   >
                     Cancelar
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-bold"
+                    className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all flex items-center space-x-1.5"
                   >
-                    Guardar y Emitir Remito
+                    <FileCheck className="w-4 h-4" />
+                    <span>Guardar y Emitir Remito</span>
                   </button>
                 </div>
               </div>
