@@ -226,10 +226,23 @@ export interface StoreInfo {
   cardInterestPlans?: CardInterestPlan[];
 }
 
+export interface StoreAccount {
+  id: string;
+  name: string;
+  cuit: string;
+  businessType: BusinessRubro;
+  address: string;
+  phone: string;
+  email: string;
+  active: boolean;
+  createdAt: string;
+}
+
 export type UserRole = 'admin' | 'cashier' | 'manager';
 
 export interface SystemUser {
   id: string;
+  storeId?: string;
   username: string;
   password: string;
   name: string;
@@ -240,6 +253,9 @@ export interface SystemUser {
 }
 
 export interface AppState {
+  currentStoreId?: string;
+  currentUserId?: string;
+  stores?: StoreAccount[];
   storeInfo: StoreInfo;
   products: Product[];
   suppliers: Supplier[];

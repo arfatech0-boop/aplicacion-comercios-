@@ -78,8 +78,48 @@ app.get('/api/events', (req, res) => {
 
 // Ensure storeInfo & users defaults
 appState.storeInfo = { ...initialAppData.storeInfo, ...appState.storeInfo };
+
+if (!appState.stores || appState.stores.length === 0) {
+  appState.stores = [
+    {
+      id: 'store-demo-a',
+      name: 'Comercio Demo A - Ferretería Central',
+      cuit: '20-12345678-9',
+      businessType: 'Ferretería / Corralón' as any,
+      address: 'Av. Corrientes 1234, CABA',
+      phone: '11 4444-5555',
+      email: 'contacto@ferreteriacentral.com',
+      active: true,
+      createdAt: new Date().toISOString()
+    },
+    {
+      id: 'store-demo-b',
+      name: 'Comercio Demo B - Almacén Don Pedro',
+      cuit: '30-98765432-1',
+      businessType: 'Supermercado / Almacén' as any,
+      address: 'Calle San Martín 456, Rosario',
+      phone: '341 555-6666',
+      email: 'ventas@almacendonpedro.com',
+      active: true,
+      createdAt: new Date().toISOString()
+    }
+  ];
+}
+
 if (!appState.users || appState.users.length === 0) {
-  appState.users = [...initialAppData.users];
+  appState.users = [
+    ...initialAppData.users,
+    {
+      id: 'usr-demo-b',
+      storeId: 'store-demo-b',
+      username: 'donpedro',
+      password: '123456',
+      name: 'Don Pedro',
+      role: 'admin',
+      active: true,
+      createdAt: new Date().toISOString()
+    }
+  ];
 }
 
 // POST Login Endpoint

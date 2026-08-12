@@ -7,8 +7,76 @@ export class DataService {
   private static isConnected: boolean = false;
   private static eventSource: EventSource | null = null;
 
+  private static currentStoreId: string = localStorage.getItem('gc_store_id') || '';
+  private static currentUserId: string = localStorage.getItem('gc_user_id') || '';
+
+  public static getCurrentStoreId(): string {
+    return this.currentStoreId;
+  }
+
+  public static getCurrentUserId(): string {
+    return this.currentUserId;
+  }
+
+  public static setCurrentSession(storeId: string, userId: string) {
+    this.currentStoreId = storeId;
+    this.currentUserId = userId;
+    localStorage.setItem('gc_store_id', storeId);
+    localStorage.setItem('gc_user_id', userId);
+    this.fetchLatest();
+  }
+
+  public static clearSession() {
+    this.currentStoreId = '';
+    this.currentUserId = '';
+    localStorage.removeItem('gc_store_id');
+    localStorage.removeItem('gc_user_id');
+    this.notify();
+  }
+
   public static getState(): AppState {
-    return this.state;
+    if (!this.currentStoreId) {
+      return this.state;
+    }
+    return this.getStoreScopedState(this.currentStoreId);
+  }
+
+  public static getStoreScopedState(storeId: string): AppState {
+    const sId = storeId;
+    
+    // Filter products
+    const products = this.state.products.filter(p => (p as any).storeId === sId || (! (p as any).storeId && sId === 'store-demo-a'));
+    const sales = this.state.sales.filter(s => (s as any).storeId === sId || (! (s as any).storeId && sId === 'store-demo-a'));
+    const customers = this.state.customers.filter(c => (c as any).storeId === sId || (! (c as any).storeId && sId === 'store-demo-a'));
+    const suppliers = this.state.suppliers.filter(sup => (sup as any).storeId === sId || (! (sup as any).storeId && sId === 'store-demo-a'));
+    const cheques = this.state.cheques.filter(chq => (chq as any).storeId === sId || (! (chq as any).storeId && sId === 'store-demo-a'));
+    const cashRegisters = this.state.cashRegisters.filter(cr => (cr as any).storeId === sId || (! (cr as any).storeId && sId === 'store-demo-a'));
+    const withdrawals = this.state.withdrawals.filter(w => (w as any).storeId === sId || (! (w as any).storeId && sId === 'store-demo-a'));
+    const priceIncreaseLogs = this.state.priceIncreaseLogs.filter(log => (log as any).storeId === sId || (! (log as any).storeId && sId === 'store-demo-a'));
+
+    const currentStore = (this.state.stores || []).find(st => st.id === sId);
+
+    const storeInfo: StoreInfo = {
+      ...this.state.storeInfo,
+      name: currentStore ? currentStore.name : this.state.storeInfo.name,
+      cuit: currentStore ? currentStore.cuit : this.state.storeInfo.cuit,
+      businessType: currentStore ? currentStore.businessType : this.state.storeInfo.businessType
+    };
+
+    return {
+      ...this.state,
+      currentStoreId: sId,
+      currentUserId: this.currentUserId,
+      storeInfo,
+      products,
+      sales,
+      customers,
+      suppliers,
+      cheques,
+      cashRegisters,
+      withdrawals,
+      priceIncreaseLogs
+    };
   }
 
   public static subscribe(listener: (state: AppState) => void): () => void {
@@ -112,11 +180,12 @@ export class DataService {
   // --- ACTIONS ---
 
   public static async saveProduct(product: Product): Promise<void> {
+    const itemWithStore = { ...product, storeId: (product as any).storeId || this.currentStoreId || 'store-demo-a' };
     try {
       const res = await fetch('/api/products', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(product)
+        body: JSON.stringify(itemWithStore)
       });
       if (res.ok) {
         const json = await res.json();
@@ -129,11 +198,11 @@ export class DataService {
       console.warn('[DataService] Fallback to client state edit');
     }
 
-    const index = this.state.products.findIndex(p => p.id === product.id);
+    const index = this.state.products.findIndex(p => p.id === itemWithStore.id);
     if (index >= 0) {
-      this.state.products[index] = product;
+      this.state.products[index] = itemWithStore;
     } else {
-      this.state.products.unshift(product);
+      this.state.products.unshift(itemWithStore);
     }
     this.notify();
   }

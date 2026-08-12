@@ -60,13 +60,26 @@ export default function App() {
     return () => unsubscribe();
   }, [currentUser]);
 
-  const handleLoginSuccess = (user: SystemUser) => {
+  const handleLogin = (user: SystemUser, storeId: string) => {
     setCurrentUser(user);
+    DataService.setCurrentSession(storeId, user.id);
     localStorage.setItem('gc_current_user', JSON.stringify(user));
+  };
+
+  const handleCreateStore = (newStore: any, adminUser: SystemUser) => {
+    const updatedStores = [...(appState.stores || []), newStore];
+    const updatedUsers = [...(appState.users || []), adminUser];
+    setAppState(prev => ({
+      ...prev,
+      stores: updatedStores,
+      users: updatedUsers
+    }));
+    handleLogin(adminUser, newStore.id);
   };
 
   const handleLogout = () => {
     setCurrentUser(null);
+    DataService.clearSession();
     localStorage.removeItem('gc_current_user');
   };
 
@@ -80,7 +93,13 @@ export default function App() {
   };
 
   if (!currentUser) {
-    return <LoginView appState={appState} onLoginSuccess={handleLoginSuccess} />;
+    return (
+      <LoginView 
+        appState={appState} 
+        onLogin={handleLogin}
+        onCreateStore={handleCreateStore}
+      />
+    );
   }
 
   return (
