@@ -67,7 +67,22 @@ export const ChequesView: React.FC<ChequesViewProps> = ({ appState }) => {
   };
 
   const handleChangeStatus = async (cheque: Cheque, newStatus: ChequeStatus) => {
-    await DataService.saveCheque({ ...cheque, status: newStatus });
+    const statusNames: Record<ChequeStatus, string> = {
+      in_wallet: 'En Cartera',
+      pending: 'En Cartera (Pendiente)',
+      cashed: 'COBRADO (Efectivo)',
+      deposited: 'DEPOSITADO (Banco)',
+      endorsed: 'ENDOSADO (Terceros)',
+      rejected: 'RECHAZADO'
+    };
+
+    const confirmMsg = `¿Desea cambiar el estado del Cheque N° "${cheque.number}" (${cheque.bank}) a "${statusNames[newStatus]}"?`;
+    if (!window.confirm(confirmMsg)) return;
+
+    const updatedCheque: Cheque = { ...cheque, status: newStatus };
+    await DataService.saveCheque(updatedCheque);
+
+    alert(`¡Cheque N° ${cheque.number} actualizado a estado "${statusNames[newStatus]}" con éxito!`);
   };
 
   return (
@@ -207,29 +222,52 @@ export const ChequesView: React.FC<ChequesViewProps> = ({ appState }) => {
                           {cheque.status === 'in_wallet' ? 'En Cartera' : cheque.status === 'cashed' ? 'Cobrado' : cheque.status === 'deposited' ? 'Depositado' : cheque.status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
-                        {cheque.status === 'in_wallet' && (
+                      <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
+                        {cheque.status === 'in_wallet' ? (
                           <>
                             <button
+                              type="button"
                               onClick={() => handleChangeStatus(cheque, 'cashed')}
-                              className="px-2 py-1 rounded bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold text-[11px]"
+                              className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] shadow-xs transition-colors"
+                              title="Marcar cheque como Cobrado en efectivo"
                             >
                               Cobrado
                             </button>
                             <button
+                              type="button"
                               onClick={() => handleChangeStatus(cheque, 'deposited')}
-                              className="px-2 py-1 rounded bg-blue-100 hover:bg-blue-200 text-blue-800 font-bold text-[11px]"
+                              className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] shadow-xs transition-colors"
+                              title="Marcar cheque como Depositado en cuenta bancaria"
                             >
                               Depositar
                             </button>
+                            <button
+                              type="button"
+                              onClick={() => handleChangeStatus(cheque, 'rejected')}
+                              className="px-2 py-1 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 font-bold text-[11px] transition-colors"
+                              title="Marcar cheque como Rechazado / Rebotado"
+                            >
+                              Rechazar
+                            </button>
                           </>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleChangeStatus(cheque, 'in_wallet')}
+                            className="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[10px] transition-colors"
+                            title="Devolver cheque a En Cartera"
+                          >
+                            Volver a Cartera
+                          </button>
                         )}
                         <button
+                          type="button"
                           onClick={() => {
                             setEditingCheque(cheque);
                             setIsModalOpen(true);
                           }}
-                          className="p-1 text-slate-400 hover:text-indigo-600"
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors inline-flex items-center justify-center align-middle"
+                          title="Editar detalles del cheque"
                         >
                           <Edit className="w-4 h-4" />
                         </button>
