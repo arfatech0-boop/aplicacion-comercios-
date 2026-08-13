@@ -209,44 +209,7 @@
       "updatedAt": "2026-08-10T20:00:00+00:00"
     }
   ],
-  "customers": [
-    {
-      "id": "cust-1",
-      "name": "Constructora Horizon S.R.L.",
-      "dniCuit": "30-78112233-4",
-      "phone": "011 4455-6677",
-      "email": "administracion@constructorahorizon.com",
-      "address": "Calle Los Ciruelos 450",
-      "creditLimit": 500000,
-      "currentBalance": 0,
-      "notes": "Cliente corporativo habitual. Pago a 30 días",
-      "updatedAt": "2026-08-09T16:55:04.213+00:00"
-    },
-    {
-      "id": "cust-2",
-      "name": "Juan Carlos Pérez (Electricidad)",
-      "dniCuit": "20-28991234-8",
-      "phone": "011 15-6789-0123",
-      "email": "jcperez.elec@gmail.com",
-      "address": "Av. Belgrano 1280",
-      "creditLimit": 150000,
-      "currentBalance": 0,
-      "notes": "Contratista de obras particulares",
-      "updatedAt": "2026-08-09T18:21:28.185+00:00"
-    },
-    {
-      "id": "cust-3",
-      "name": "María Elena Soria",
-      "dniCuit": "27-31445566-3",
-      "phone": "011 15-4123-9876",
-      "email": "maria.soria@hotmail.com",
-      "address": "Mitre 890, 2do B",
-      "creditLimit": 80000,
-      "currentBalance": 0,
-      "notes": "Cliente final recurrente",
-      "updatedAt": "2026-08-01T09:00:00+00:00"
-    }
-  ],
+  "customers": [],
   "customerTransactions": [
     {
       "id": "tx-1786299688185",
